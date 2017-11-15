@@ -10,24 +10,22 @@
 using namespace cv;
 using namespace std;
 
-//images/EuroCoins.JPG
-//images/HoughPicture.jpg
-
 //main functions
 void displayGraphics();
+
+
 //images
 Mat src_image;
 Mat returnImg;
 
 int main(int argc, char *argv[])
 {
-	// Load an image
+	/// Load an image
 	src_image = imread(argv[1]);
 
 	if (argc != 2 || !src_image.data)
 	{
-		//printf("No image data \n");
-		cout << "No image data";
+		printf("No image data \n");
 		return -1;
 	}
 
@@ -41,7 +39,11 @@ int main(int argc, char *argv[])
 
 void displayGraphics()
 {
+	//display both images
 	imshow("Image", src_image);
 }
 
+Mat ConvertToHSV(Mat src)
+{
 
+}
