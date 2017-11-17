@@ -18,15 +18,28 @@ int S_MIN = 0;
 int S_MAX = 256;
 int V_MIN = 0;
 int V_MAX = 256;
+int dp_epsilon = 10;
+int dis_max = 180;
+int dis_min = 15;
+int angle_max = 15;
+int angle_min = 95;
+int rh_thresh = 0.66;
+int rpd_thresh = 30;
 
 //main functions
-void displayGraphics(Mat &src_image, string name);
 void on_trackbar(int, void*);
 void morphOps(Mat &thresh);
 void createTrackbars();
 void detectHand(Mat handDetectionImage, Mat& src);
-float innerAngle(float px1, float py1, float px2, float py2, float cx1,
-		float cy1);
+vector<Vec4i> eleminateDefectsByDimentation(vector<Vec4i> defects,
+		vector<Point> contours);
+vector<Vec4i> eleminateDefectsByregion(vector<Vec4i> defects,
+		vector<Point> contours, Rect boundingRect);
+float distanceP2P(Point a, Point b);
+float getAngle(Point s, Point f, Point e);
+Point findTopPoint(vector<Point> contours, Point centerOfGravity);
+vector<Point> removeRedundantEndPoints(vector<Vec4i> newDefects,
+		vector<Point> contours);
 //images
 Mat src_image;
 Mat returnImg;
@@ -55,7 +68,7 @@ int main(int argc, char *argv[])
 	detectHand(handTresholded, src_image);
 
 	imshow("src_image", src_image);
-	//imshow("hand_detection_image", handTresholded);
+	imshow("hand_detection_image", handTresholded);
 
 	waitKey(0);
 
@@ -106,7 +119,7 @@ void detectHand(Mat handDetectionImage, Mat& src)
 	findContours(temp, contours, hierarchy, CV_RETR_CCOMP,
 			CV_CHAIN_APPROX_SIMPLE);
 	int largest_area = 0;
-	int largest_contour_index = 0;
+	int largest_contour_index = -1;
 	for (int i = 0; i < contours.size(); i++) // iterate through each contour.
 	{
 		double a = contourArea(contours[i], false); //  Find the area of contour
@@ -119,60 +132,105 @@ void detectHand(Mat handDetectionImage, Mat& src)
 	}
 	cout << "largest_area = " << largest_area << endl;
 
-	Scalar color(255, 0, 255);
+	//Scalar color(255, 0, 255);
 	// Draw the largest contour using previously stored index.
-	drawContours(src, contours, largest_contour_index, color, 2, 8, hierarchy,
-			0, Point());
+	//drawContours(src, contours, largest_contour_index, color, 2, 8, hierarchy,
+	//0, Point());
+	//------------------------------------------------------
+	// apply convex detection, convex defects detection and defects elimination to detect the points
+	//------------------------------------------------------
 
-	// Convex hull
-	if (!contours.empty())
+	// check if there exist any detected largest contour
+	if (largest_contour_index != -1)
 	{
+		// apply Ramer–Douglas–Peucker algorithm to smooth counour points
+		approxPolyDP(Mat(contours[largest_contour_index]),
+				contours[largest_contour_index], dp_epsilon, true);
+
+		// draw the largest smooth contour points for display purpose
+		//drawContours(src, contours, largest_contour_index,
+		//Scalar(100, 100, 100), -1);
+
+		// calculate the bounding rectangle of the largest contour
+		Rect boundingRectect = boundingRect(
+				Mat(contours[largest_contour_index]));
+		// draw the bounding rectangle for display purpose
+		rectangle(src, boundingRectect, Scalar(255, 255, 0), 2);
+
+		// contains the convex hull for display purpose
 		vector<vector<Point> > hull(1);
+		// calculate the cinvex hull for display purpose
 		convexHull(Mat(contours[largest_contour_index]), hull[0], false);
-		drawContours(src, hull, 0, Scalar(0, 255, 0), 3);
-		if (hull[0].size() > 2)
-		{
-			vector<int> hullIndexes;
-			vector<Point> validPoints;
-			Rect boundingBox = boundingRect(hull[0]);
-			convexHull(Mat(contours[largest_contour_index]), hullIndexes, true);
-			vector<Vec4i> convexityDefects;
-			rectangle(src, boundingBox, Scalar(255, 0, 0));
-			Point center = Point(boundingBox.x + boundingBox.width / 2,
-					boundingBox.y + boundingBox.height / 2);
-			cv::convexityDefects(cv::Mat(contours[largest_contour_index]),
-					hullIndexes, convexityDefects);
-			/*convexityDefects(Mat(contours[largest_contour_index]),
-			 hullIndexes, convexityDefects);*/
-			//TODO Debug this
-			for (size_t i = 0; i < convexityDefects.size(); i++)
+		// draw the convex hull for display purpose
+		//drawContours(src, hull, 0, Scalar(0, 0, 0), 2);
+
+		// contains convex hull for calculation purpose
+		vector<int> chull;
+
+		// detect the convex hull of the largest contour for calculation purpose
+		convexHull(Mat(contours[largest_contour_index]), chull, false);
+
+		// check if the largest contour has atleast 3 points to detect defects
+		if (contours[largest_contour_index].size() > 3)
+			// check if the convex hull has atleast 2 points to detect defects
+			if (chull.size() > 2)
 			{
-				Point p1 =
-						contours[largest_contour_index][convexityDefects[i][0]];
-				Point p2 =
-						contours[largest_contour_index][convexityDefects[i][1]];
-				Point p3 =
-						contours[largest_contour_index][convexityDefects[i][2]];
-				//cv::line(src, p1, p3, cv::Scalar(0, 0, 255), 2);
-				//cv::line(src, p3, p2, cv::Scalar(0, 0, 255), 2);
+				// vector that contains the defects in the convex hull
+				vector<Vec4i> defects;
+				// calculate convexity defects for the largest contour
+				convexityDefects(contours[largest_contour_index], chull,
+						defects);
+				// eliminate the difects by their dimention constrant
+				vector<Vec4i> defects_stage1 = eleminateDefectsByDimentation(
+						defects, contours[largest_contour_index]);
+				// eliminate the defect by region of contour area
+				vector<Vec4i> defects_stage2 = eleminateDefectsByregion(
+						defects_stage1, contours[largest_contour_index],
+						boundingRectect);
 
-				double angle = atan2(center.y - p1.y, center.x - p1.x) * 180
-						/ CV_PI;
-				double inAngle = innerAngle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
-				double length = sqrt(pow(p1.x - p3.x, 2) + (p1.y - p3.y, 2));
-				if (angle > -30 && angle < 160 && abs(inAngle) > 20 && abs(
-						inAngle) < 120 && length > 0.1 * boundingBox.height)
+				// calculate the final points by eliminating the points that are too close to each other
+				vector<Point> finalPoints;
+				finalPoints = removeRedundantEndPoints(defects_stage2,
+						contours[largest_contour_index]);
+
+				// calculate moment of the largest contour to get center of gravity
+				Moments momentum = moments(contours[largest_contour_index],
+						true);
+				// calculate center of gravity of the largest contour from moment data
+				Point centerofGravity = Point(momentum.m10 / momentum.m00,
+						momentum.m01 / momentum.m00);
+				// draw center of gravity
+				circle(src, centerofGravity, 10, Scalar(0, 0, 255), -1);
+
+
+				// iterate through each points in the list of final points
+				for (int i = 0; i < finalPoints.size(); i++)
 				{
-					validPoints.push_back(p1);
-				}
-				for (size_t i = 0; i < validPoints.size(); i++)
-				{
-					cv::circle(src, validPoints[i], 9, cv::Scalar(0, 255, 0),
-							2);
+					// draw circle at the point for display purpose
+					circle(src, finalPoints[i], 10, Scalar(255, 0, 0), -1);
+					// draw a line from the center of gravity for display purpose
+					line(src, centerofGravity, finalPoints[i],
+							Scalar(0, 0, 255), 2);
 				}
 
+				// check if final points size is zero then find the top most point
+				if (finalPoints.size() == 0)
+				{
+					// find the point to represent top point
+					Point pt = findTopPoint(contours[largest_contour_index],
+							centerofGravity);
+					// check if the top point is a valid point
+					if (pt.x != 9999 && pt.y != 9999)
+					{
+						// add the top point to the list of final points
+						finalPoints.push_back(pt);
+						// draw a circle at the top point for display purpose
+						circle(src, pt, 10, Scalar(0, 100, 0), -1);
+						// draw a line from center of gravity for display purpose
+						line(src, centerofGravity, pt, Scalar(100, 255, 50), 2);
+					}
+				}
 			}
-		}
 	}
 
 }
@@ -202,51 +260,185 @@ void createTrackbars()
 
 }
 
-float innerAngle(float px1, float py1, float px2, float py2, float cx1,
-		float cy1)
+vector<Vec4i> eleminateDefectsByDimentation(vector<Vec4i> defects,
+		vector<Point> contours)
 {
-
-	float dist1 = std::sqrt(
-			(px1 - cx1) * (px1 - cx1) + (py1 - cy1) * (py1 - cy1));
-	float dist2 = std::sqrt(
-			(px2 - cx1) * (px2 - cx1) + (py2 - cy1) * (py2 - cy1));
-
-	float Ax, Ay;
-	float Bx, By;
-	float Cx, Cy;
-
-	//find closest point to C
-	//printf("dist = %lf %lf\n", dist1, dist2);
-
-	Cx = cx1;
-	Cy = cy1;
-	if (dist1 < dist2)
+	//------------------------------------------------------
+	// eliminate defects by its Dimentation
+	//------------------------------------------------------
+	// contains the filtered defects
+	vector<Vec4i> filteredDefects;
+	// iterate through each defect points
+	for (int i = 0; i < defects.size(); i++)
 	{
-		Bx = px1;
-		By = py1;
-		Ax = px2;
-		Ay = py2;
+		// get the starting point of the defect
+		Point ptStart(contours[defects[i][0]]);
+		// get the ending point of the defect
+		Point ptEnd(contours[defects[i][1]]);
+		// get the depth point of the defect
+		Point ptFar(contours[defects[i][2]]);
+		// calculate distance from starting point to depth point
+		float distance1 = distanceP2P(ptStart, ptFar);
+		// calculate destance from ending point to depth point
+		float distance2 = distanceP2P(ptEnd, ptFar);
+		// calculate the angle between line(start,far) and line(end,far)
+		float angle = getAngle(ptStart, ptFar, ptEnd);
 
+		cout << "distance1: " << distance1 << endl;
+		cout << "distance2: " << distance2 << endl;
+		cout << "angle: " << angle << endl;
+
+		// check if the distance and angle are within the predefined constrant
+		if ((distance1 >= dis_min) && (distance1 <= dis_max) && (distance2
+				>= dis_min) && (distance2 <= dis_max) && (angle >= angle_min)
+				&& (angle <= angle_max))
+		{
+			// add the defect to the list of filtered defects
+			filteredDefects.push_back(defects[i]);
+		}
 	}
-	else
-	{
-		Bx = px2;
-		By = py2;
-		Ax = px1;
-		Ay = py1;
-	}
-
-	float Q1 = Cx - Ax;
-	float Q2 = Cy - Ay;
-	float P1 = Bx - Ax;
-	float P2 = By - Ay;
-
-	float A = std::acos(
-			(P1 * Q1 + P2 * Q2) / (std::sqrt(P1 * P1 + P2 * P2) * std::sqrt(
-					Q1 * Q1 + Q2 * Q2)));
-
-	A = A * 180 / CV_PI;
-
-	return A;
+	// return the set of filtered defects
+	return filteredDefects;
 }
 
+vector<Vec4i> eleminateDefectsByregion(vector<Vec4i> defects,
+		vector<Point> contours, Rect boundingRect)
+{
+	//------------------------------------------------------
+	// eliminate defects by its region constrant
+	//------------------------------------------------------
+	// denotes the region of interest
+	Rect regionFilter;
+	// set regions x location to bounding rectangles x location
+	regionFilter.x = boundingRect.x;
+	// set regions y location to bounding rectangles y location
+	regionFilter.y = boundingRect.y;
+	// set with of the region to bounding rectangles width
+	regionFilter.width = boundingRect.width;
+	// set height of the region to bounding rectangles widh % threshold
+	regionFilter.height = boundingRect.height * rh_thresh;
+	// denotes the set of filtered defects
+	vector<Vec4i> newDefects;
+	// iterate throush all defects
+	for (int i = 0; i < defects.size(); i++)
+	{
+		// get the start of the defect
+		Point ptStart(contours[defects[i][0]]);
+		// get the end of the defect
+		Point ptEnd(contours[defects[i][1]]);
+		// get the depth of the defect
+		Point ptFar(contours[defects[i][2]]);
+		// check if all the points belong to region of interest
+		if (regionFilter.contains(ptStart) && regionFilter.contains(ptEnd)
+				&& regionFilter.contains(ptFar))
+		{
+			// add the defect to the list of filtered defects
+			newDefects.push_back(defects[i]);
+		}
+	}
+	// return list of filtered defects
+	return newDefects;
+}
+
+float distanceP2P(Point a, Point b)
+{
+	// calculate the distance between points
+	float distance = sqrt(fabs(pow(a.x - b.x, 2) + pow(a.y - b.y, 2)));
+	// return the distance
+	return distance;
+}
+
+float getAngle(Point s, Point f, Point e)
+{
+	// get angle between three points representing two lines
+	float l1 = distanceP2P(f, s);
+	float l2 = distanceP2P(f, e);
+	float dot = (s.x - f.x) * (e.x - f.x) + (s.y - f.y) * (e.y - f.y);
+	float angle = acos(dot / (l1 * l2));
+	angle = angle * 180 / M_PI;
+	// return the angle
+	return angle;
+}
+
+Point findTopPoint(vector<Point> contours, Point centerOfGravity)
+{
+	//------------------------------------------------------
+	// find the top most point in a contour such that top point is above center of gravity
+	//------------------------------------------------------
+	// set the point to a invalid location
+	Point point(9999, 9999);
+	// iterate through all the points in the conture
+	for (int i = 0; i < contours.size(); i++)
+	{
+		// check if the y coordinate is less than the previous saved point {0 == top most | y axis is from top to bottom direction}
+		if (contours[i].y <= point.y && contours[i].y < centerOfGravity.y
+				&& distanceP2P(centerOfGravity, contours[i]) > 0)
+		{
+			// update the point to new top point
+			point = contours[i];
+		}
+	}
+	// return the top most point
+	return point;
+}
+
+vector<Point> removeRedundantEndPoints(vector<Vec4i> newDefects,
+		vector<Point> contours)
+{
+	//------------------------------------------------------
+	// remove points that are too close and keep only one of them
+	//------------------------------------------------------
+	// set of filtered points
+	vector<Point> pointsFinal;
+	// set of all points
+	vector<Point> pointsAll;
+	// iterate through each defect
+	for (int i = 0; i < newDefects.size(); i++)
+	{
+		// get the starting point of the defect
+		Point ptStart(contours[newDefects[i][0]]);
+		// get the ending point of the defect
+		Point ptEnd(contours[newDefects[i][1]]);
+		// add the starting point to list of all points
+		pointsAll.push_back(ptStart);
+		// add the ending point to list of all points
+		pointsAll.push_back(ptEnd);
+	}
+	// boolean flag to indicate if current point has no close points in the list of filtered points
+	bool flag = false;
+	// iterate through all the points
+	for (int i = 0; i < pointsAll.size(); i++)
+	{
+		// if list of filtered points have no previous points
+		if (pointsFinal.size() == 0)
+		{
+			// add the point to list of filtered points
+			pointsFinal.push_back(pointsAll[i]);
+		}
+		// if the list of filtered points already some points
+		else
+		{
+			// set flag to indicate that there is no close points
+			flag = false;
+			// iterate through all filtered points
+			for (int j = 0; j < pointsFinal.size(); j++)
+			{
+				// check if the distance is within threshold
+				if (distanceP2P(pointsFinal[j], pointsAll[i]) < rpd_thresh)
+				{
+					// mark this point as close point
+					flag = true;
+					break;
+				}
+			}
+			// if the point is not close point
+			if (flag == false)
+			{
+				// add to list of filtered points
+				pointsFinal.push_back(pointsAll[i]);
+			}
+		}
+	}
+	// return list of filtered points
+	return pointsFinal;
+}
