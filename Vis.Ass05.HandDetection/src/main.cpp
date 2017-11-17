@@ -20,11 +20,11 @@ int V_MIN = 0;
 int V_MAX = 256;
 int dp_epsilon = 10;
 int dis_max = 400;
-int dis_min = 15;
+int dis_min = 7;
 int angle_max = 180;
-int angle_min = 15;
+int angle_min = 20;
 int rh_thresh = 0.66;
-int rpd_thresh = 30;
+int rpd_thresh = 100;
 
 //main functions
 void on_trackbar(int, void*);
@@ -34,12 +34,11 @@ void detectHand(Mat handDetectionImage, Mat& src);
 vector<Vec4i> eleminateDefectsByDimentation(vector<Vec4i> defects,
 		vector<Point> contours, vector<Point>& startPoints,
 		vector<Point>& endPoints, vector<Point>&depthPoints);
-vector<Vec4i> eleminateDefectsByregion(vector<Vec4i> defects,
-		vector<Point> contours, Rect boundingRect);
 float distanceP2P(Point a, Point b);
 float getAngle(Point s, Point f, Point e);
 vector<Point> removeRedundantEndPoints(vector<Vec4i> newDefects,
 		vector<Point> contours);
+string intToString(int number);
 
 //images
 Mat src_image;
@@ -63,7 +62,7 @@ int main(int argc, char *argv[])
 	Mat handTresholded;
 
 	cvtColor(src_image, HSVImage, COLOR_BGR2HSV);
-	inRange(HSVImage, Scalar(0, 0, 0), Scalar(0, 0, 219), handTresholded);
+	inRange(HSVImage, Scalar(0, 0, 0), Scalar(0, 0, 220), handTresholded);
 
 	morphOps(handTresholded);
 	detectHand(handTresholded, src_image);
@@ -145,12 +144,19 @@ void detectHand(Mat handDetectionImage, Mat& src)
 	if (largest_contour_index != -1)
 	{
 		// apply Ramer–Douglas–Peucker algorithm to smooth counour points
-		approxPolyDP(Mat(contours[largest_contour_index]),
-				contours[largest_contour_index], dp_epsilon, true);
+		//approxPolyDP(Mat(contours[largest_contour_index]),
+		//contours[largest_contour_index], dp_epsilon, true);
 
 		// draw the largest smooth contour points for display purpose
-		//drawContours(src, contours, largest_contour_index,
-		//Scalar(100, 100, 100), -1);
+		drawContours(src, contours, largest_contour_index,
+				Scalar(100, 100, 100), 0);
+
+		// contains the convex hull for display purpose
+		vector<vector<Point> > hull(1);
+		// calculate the cinvex hull for display purpose
+		convexHull(Mat(contours[largest_contour_index]), hull[0], false);
+		// draw the convex hull for display purpose
+		drawContours(src, hull, 0, Scalar(0, 0, 0), 2);
 
 		// calculate the bounding rectangle of the largest contour
 		Rect boundingRectect = boundingRect(
@@ -162,7 +168,7 @@ void detectHand(Mat handDetectionImage, Mat& src)
 		vector<int> chull;
 
 		// detect the convex hull of the largest contour for calculation
-		convexHull(Mat(contours[largest_contour_index]), chull, CV_COUNTER_CLOCKWISE);
+		convexHull(Mat(contours[largest_contour_index]), chull, false);
 
 		vector<Point> startPoints;
 		vector<Point> endPoints;
@@ -178,29 +184,45 @@ void detectHand(Mat handDetectionImage, Mat& src)
 				convexityDefects(contours[largest_contour_index], chull,
 						defects);
 				// eliminate the difects by their dimention constrant
-				vector<Vec4i> defects_stage1 = eleminateDefectsByDimentation(
+				vector<Vec4i> defects_stage = eleminateDefectsByDimentation(
 						defects, contours[largest_contour_index], startPoints,
 						endPoints, depthPoints);
 
-				/*cout << "startPoint_size: "<< startPoints.size() << endl;
+				cout << "startPoint_size: " << startPoints.size() << endl;
 				for (int i = 0; i < startPoints.size(); i++)
 				{
 
 					// draw circle at the point for display purpose
 					circle(src, startPoints[i], 10, Scalar(0, 0, 255), -1);
-					// draw a line from the center of gravity for display purpose
-					//line(src, centerofGravity, startPoints[i],
-							//Scalar(0, 0, 255), 2);
-				}*/
+					putText(src, "S" + intToString(i),
+							Point(startPoints[i].x - 3, startPoints[i].y - 4),
+							1, 1, Scalar(0, 0, 0), 2);
+				}
+				cout << "end_size: " << endPoints.size() << endl;
+				for (int i = 0; i < endPoints.size(); i++)
+				{
 
-				// eliminate the defect by region of contour area
-				vector<Vec4i> defects_stage2 = eleminateDefectsByregion(
-						defects_stage1, contours[largest_contour_index],
-						boundingRectect);
+					// draw circle at the point for display purpose
+					circle(src, endPoints[i], 10, Scalar(0, 255, 0), -1);
+					putText(src, "E" + intToString(i),
+							Point(endPoints[i].x - 3, endPoints[i].y - 4), 1,
+							1, Scalar(0, 0, 0), 2);
+
+				}
+				cout << "depth_size: " << depthPoints.size() << endl;
+				for (int i = 0; i < depthPoints.size(); i++)
+				{
+
+					// draw circle at the point for display purpose
+					circle(src, depthPoints[i], 10, Scalar(255, 0, 0), -1);
+					putText(src, "D" + intToString(i),
+							Point(depthPoints[i].x - 3, depthPoints[i].y - 4),
+							1, 1, Scalar(0, 0, 0), 2);
+				}
 
 				// calculate the final points by eliminating the points that are too close to each other
 				vector<Point> finalPoints;
-				finalPoints = removeRedundantEndPoints(defects_stage1,
+				finalPoints = removeRedundantEndPoints(defects_stage,
 						contours[largest_contour_index]);
 
 				// calculate moment of the largest contour to get center of gravity
@@ -214,14 +236,14 @@ void detectHand(Mat handDetectionImage, Mat& src)
 
 				cout << "finalPoints size: " << finalPoints.size() << endl;
 				// iterate through each points in the list of final points
-				for (int i = 0; i < finalPoints.size(); i++)
-				{
-					// draw circle at the point for display purpose
-					circle(src, finalPoints[i], 10, Scalar(255, 0, 0), -1);
-					// draw a line from the center of gravity for display purpose
-					line(src, centerofGravity, finalPoints[i],
-							Scalar(0, 0, 255), 2);
-				}
+				/*for (int i = 0; i < finalPoints.size(); i++)
+				 {
+				 // draw circle at the point for display purpose
+				 circle(src, finalPoints[i], 10, Scalar(255, 0, 0), -1);
+				 // draw a line from the center of gravity for display purpose
+				 line(src, centerofGravity, finalPoints[i],
+				 Scalar(0, 0, 255), 2);
+				 }*/
 
 			}
 	}
@@ -283,59 +305,24 @@ vector<Vec4i> eleminateDefectsByDimentation(vector<Vec4i> defects,
 		cout << "angle: " << angle << endl;
 
 		// check if the distance and angle are within the predefined constrant
-		if ((distance1 >= dis_min) && (distance1 <= dis_max) && (distance2
-				>= dis_min) && (distance2 <= dis_max) && (angle >= angle_min)
-				&& (angle <= angle_max))
+		/*if ((distance1 >= dis_min) && (distance1 <= dis_max) && (distance2
+		 >= dis_min) && (distance2 <= dis_max) && (angle >= angle_min)
+		 && (angle <= angle_max))*/
+		const Vec4i& v = defects[i];
+		float depth = v[3] / 256;
+		if (depth > 10) //  filter defects by depth
+
 		{
 			// add the defect to the list of filtered defects
 			filteredDefects.push_back(defects[i]);
 			startPoints.push_back(ptStart);
-			startPoints.push_back(ptEnd);
-			startPoints.push_back(ptFar);
+			endPoints.push_back(ptEnd);
+			depthPoints.push_back(ptFar);
 		}
 	}
-	cout << "startPoint_size(in function): "<< startPoints.size() << endl;
+	cout << "startPoint_size(in function): " << startPoints.size() << endl;
 	// return the set of filtered defects
 	return filteredDefects;
-}
-
-vector<Vec4i> eleminateDefectsByregion(vector<Vec4i> defects,
-		vector<Point> contours, Rect boundingRect)
-{
-	//------------------------------------------------------
-	// eliminate defects by its region constrant
-	//------------------------------------------------------
-	// denotes the region of interest
-	Rect regionFilter;
-	// set regions x location to bounding rectangles x location
-	regionFilter.x = boundingRect.x;
-	// set regions y location to bounding rectangles y location
-	regionFilter.y = boundingRect.y;
-	// set with of the region to bounding rectangles width
-	regionFilter.width = boundingRect.width;
-	// set height of the region to bounding rectangles widh % threshold
-	regionFilter.height = boundingRect.height * rh_thresh;
-	// denotes the set of filtered defects
-	vector<Vec4i> newDefects;
-	// iterate throush all defects
-	for (int i = 0; i < defects.size(); i++)
-	{
-		// get the start of the defect
-		Point ptStart(contours[defects[i][0]]);
-		// get the end of the defect
-		Point ptEnd(contours[defects[i][1]]);
-		// get the depth of the defect
-		Point ptFar(contours[defects[i][2]]);
-		// check if all the points belong to region of interest
-		if (regionFilter.contains(ptStart) && regionFilter.contains(ptEnd)
-				&& regionFilter.contains(ptFar))
-		{
-			// add the defect to the list of filtered defects
-			newDefects.push_back(defects[i]);
-		}
-	}
-	// return list of filtered defects
-	return newDefects;
 }
 
 float distanceP2P(Point a, Point b)
@@ -416,5 +403,12 @@ vector<Point> removeRedundantEndPoints(vector<Vec4i> newDefects,
 	}
 	// return list of filtered points
 	return pointsFinal;
+}
+string intToString(int number)
+{
+
+	std::stringstream ss;
+	ss << number;
+	return ss.str();
 }
 
