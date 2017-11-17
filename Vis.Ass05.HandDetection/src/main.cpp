@@ -19,10 +19,10 @@ int S_MAX = 256;
 int V_MIN = 0;
 int V_MAX = 256;
 int dp_epsilon = 10;
-int dis_max = 180;
+int dis_max = 400;
 int dis_min = 15;
-int angle_max = 15;
-int angle_min = 95;
+int angle_max = 180;
+int angle_min = 15;
 int rh_thresh = 0.66;
 int rpd_thresh = 30;
 
@@ -32,14 +32,15 @@ void morphOps(Mat &thresh);
 void createTrackbars();
 void detectHand(Mat handDetectionImage, Mat& src);
 vector<Vec4i> eleminateDefectsByDimentation(vector<Vec4i> defects,
-		vector<Point> contours);
+		vector<Point> contours, vector<Point>& startPoints,
+		vector<Point>& endPoints, vector<Point>&depthPoints);
 vector<Vec4i> eleminateDefectsByregion(vector<Vec4i> defects,
 		vector<Point> contours, Rect boundingRect);
 float distanceP2P(Point a, Point b);
 float getAngle(Point s, Point f, Point e);
-Point findTopPoint(vector<Point> contours, Point centerOfGravity);
 vector<Point> removeRedundantEndPoints(vector<Vec4i> newDefects,
 		vector<Point> contours);
+
 //images
 Mat src_image;
 Mat returnImg;
@@ -68,7 +69,7 @@ int main(int argc, char *argv[])
 	detectHand(handTresholded, src_image);
 
 	imshow("src_image", src_image);
-	imshow("hand_detection_image", handTresholded);
+	//imshow("hand_detection_image", handTresholded);
 
 	waitKey(0);
 
@@ -157,19 +158,15 @@ void detectHand(Mat handDetectionImage, Mat& src)
 		// draw the bounding rectangle for display purpose
 		rectangle(src, boundingRectect, Scalar(255, 255, 0), 2);
 
-		// contains the convex hull for display purpose
-		vector<vector<Point> > hull(1);
-		// calculate the cinvex hull for display purpose
-		convexHull(Mat(contours[largest_contour_index]), hull[0], false);
-		// draw the convex hull for display purpose
-		//drawContours(src, hull, 0, Scalar(0, 0, 0), 2);
-
 		// contains convex hull for calculation purpose
 		vector<int> chull;
 
-		// detect the convex hull of the largest contour for calculation purpose
-		convexHull(Mat(contours[largest_contour_index]), chull, false);
+		// detect the convex hull of the largest contour for calculation
+		convexHull(Mat(contours[largest_contour_index]), chull, CV_COUNTER_CLOCKWISE);
 
+		vector<Point> startPoints;
+		vector<Point> endPoints;
+		vector<Point> depthPoints;
 		// check if the largest contour has atleast 3 points to detect defects
 		if (contours[largest_contour_index].size() > 3)
 			// check if the convex hull has atleast 2 points to detect defects
@@ -182,7 +179,20 @@ void detectHand(Mat handDetectionImage, Mat& src)
 						defects);
 				// eliminate the difects by their dimention constrant
 				vector<Vec4i> defects_stage1 = eleminateDefectsByDimentation(
-						defects, contours[largest_contour_index]);
+						defects, contours[largest_contour_index], startPoints,
+						endPoints, depthPoints);
+
+				/*cout << "startPoint_size: "<< startPoints.size() << endl;
+				for (int i = 0; i < startPoints.size(); i++)
+				{
+
+					// draw circle at the point for display purpose
+					circle(src, startPoints[i], 10, Scalar(0, 0, 255), -1);
+					// draw a line from the center of gravity for display purpose
+					//line(src, centerofGravity, startPoints[i],
+							//Scalar(0, 0, 255), 2);
+				}*/
+
 				// eliminate the defect by region of contour area
 				vector<Vec4i> defects_stage2 = eleminateDefectsByregion(
 						defects_stage1, contours[largest_contour_index],
@@ -190,7 +200,7 @@ void detectHand(Mat handDetectionImage, Mat& src)
 
 				// calculate the final points by eliminating the points that are too close to each other
 				vector<Point> finalPoints;
-				finalPoints = removeRedundantEndPoints(defects_stage2,
+				finalPoints = removeRedundantEndPoints(defects_stage1,
 						contours[largest_contour_index]);
 
 				// calculate moment of the largest contour to get center of gravity
@@ -202,7 +212,7 @@ void detectHand(Mat handDetectionImage, Mat& src)
 				// draw center of gravity
 				circle(src, centerofGravity, 10, Scalar(0, 0, 255), -1);
 
-
+				cout << "finalPoints size: " << finalPoints.size() << endl;
 				// iterate through each points in the list of final points
 				for (int i = 0; i < finalPoints.size(); i++)
 				{
@@ -213,23 +223,6 @@ void detectHand(Mat handDetectionImage, Mat& src)
 							Scalar(0, 0, 255), 2);
 				}
 
-				// check if final points size is zero then find the top most point
-				if (finalPoints.size() == 0)
-				{
-					// find the point to represent top point
-					Point pt = findTopPoint(contours[largest_contour_index],
-							centerofGravity);
-					// check if the top point is a valid point
-					if (pt.x != 9999 && pt.y != 9999)
-					{
-						// add the top point to the list of final points
-						finalPoints.push_back(pt);
-						// draw a circle at the top point for display purpose
-						circle(src, pt, 10, Scalar(0, 100, 0), -1);
-						// draw a line from center of gravity for display purpose
-						line(src, centerofGravity, pt, Scalar(100, 255, 50), 2);
-					}
-				}
 			}
 	}
 
@@ -261,7 +254,8 @@ void createTrackbars()
 }
 
 vector<Vec4i> eleminateDefectsByDimentation(vector<Vec4i> defects,
-		vector<Point> contours)
+		vector<Point> contours, vector<Point>& startPoints,
+		vector<Point>& endPoints, vector<Point>&depthPoints)
 {
 	//------------------------------------------------------
 	// eliminate defects by its Dimentation
@@ -295,8 +289,12 @@ vector<Vec4i> eleminateDefectsByDimentation(vector<Vec4i> defects,
 		{
 			// add the defect to the list of filtered defects
 			filteredDefects.push_back(defects[i]);
+			startPoints.push_back(ptStart);
+			startPoints.push_back(ptEnd);
+			startPoints.push_back(ptFar);
 		}
 	}
+	cout << "startPoint_size(in function): "<< startPoints.size() << endl;
 	// return the set of filtered defects
 	return filteredDefects;
 }
@@ -359,29 +357,6 @@ float getAngle(Point s, Point f, Point e)
 	// return the angle
 	return angle;
 }
-
-Point findTopPoint(vector<Point> contours, Point centerOfGravity)
-{
-	//------------------------------------------------------
-	// find the top most point in a contour such that top point is above center of gravity
-	//------------------------------------------------------
-	// set the point to a invalid location
-	Point point(9999, 9999);
-	// iterate through all the points in the conture
-	for (int i = 0; i < contours.size(); i++)
-	{
-		// check if the y coordinate is less than the previous saved point {0 == top most | y axis is from top to bottom direction}
-		if (contours[i].y <= point.y && contours[i].y < centerOfGravity.y
-				&& distanceP2P(centerOfGravity, contours[i]) > 0)
-		{
-			// update the point to new top point
-			point = contours[i];
-		}
-	}
-	// return the top most point
-	return point;
-}
-
 vector<Point> removeRedundantEndPoints(vector<Vec4i> newDefects,
 		vector<Point> contours)
 {
@@ -442,3 +417,4 @@ vector<Point> removeRedundantEndPoints(vector<Vec4i> newDefects,
 	// return list of filtered points
 	return pointsFinal;
 }
+
