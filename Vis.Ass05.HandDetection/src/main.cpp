@@ -67,6 +67,7 @@ int main(int argc, char *argv[])
 	morphOps(handTresholded);
 	detectHand(handTresholded, src_image);
 
+	//namedWindow("src_image", CV_WINDOW_NORMAL);
 	imshow("src_image", src_image);
 	//imshow("hand_detection_image", handTresholded);
 
