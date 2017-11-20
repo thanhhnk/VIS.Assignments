@@ -33,7 +33,7 @@ void createTrackbars();
 void detectHand(Mat handDetectionImage, Mat& src);
 vector<Vec4i> eleminateDefectsByDimentation(vector<Vec4i> defects,
 		vector<Point> contours, vector<Point>& startPoints,
-		vector<Point>& endPoints, vector<Point>&depthPoints);
+		vector<Point>& endPoints, vector<Point>&farPoints);
 float distanceP2P(Point a, Point b);
 float getAngle(Point s, Point f, Point e);
 vector<Point> removeRedundantEndPoints(vector<Vec4i> newDefects,
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	morphOps(handTresholded);
 	detectHand(handTresholded, src_image);
 
-	//namedWindow("src_image", CV_WINDOW_NORMAL);
+	namedWindow("src_image", CV_WINDOW_NORMAL);
 	imshow("src_image", src_image);
 	//imshow("hand_detection_image", handTresholded);
 
@@ -154,8 +154,9 @@ void detectHand(Mat handDetectionImage, Mat& src)
 
 		// contains the convex hull for display purpose
 		vector<vector<Point> > hull(1);
-		// calculate the cinvex hull for display purpose
-		convexHull(Mat(contours[largest_contour_index]), hull[0], false);
+		// calculate the convex hull for display purpose
+		convexHull(Mat(contours[largest_contour_index]), hull[0],
+				CV_COUNTER_CLOCKWISE);
 		// draw the convex hull for display purpose
 		drawContours(src, hull, 0, Scalar(0, 0, 0), 2);
 
@@ -169,11 +170,12 @@ void detectHand(Mat handDetectionImage, Mat& src)
 		vector<int> chull;
 
 		// detect the convex hull of the largest contour for calculation
-		convexHull(Mat(contours[largest_contour_index]), chull, false);
+		convexHull(Mat(contours[largest_contour_index]), chull,
+				CV_COUNTER_CLOCKWISE);
 
 		vector<Point> startPoints;
 		vector<Point> endPoints;
-		vector<Point> depthPoints;
+		vector<Point> farPoints;
 		// check if the largest contour has atleast 3 points to detect defects
 		if (contours[largest_contour_index].size() > 3)
 			// check if the convex hull has atleast 2 points to detect defects
@@ -187,8 +189,9 @@ void detectHand(Mat handDetectionImage, Mat& src)
 				// eliminate the difects by their dimention constrant
 				vector<Vec4i> defects_stage = eleminateDefectsByDimentation(
 						defects, contours[largest_contour_index], startPoints,
-						endPoints, depthPoints);
+						endPoints, farPoints);
 
+				//TESTING THE RESULT BY DRAWING
 				cout << "startPoint_size: " << startPoints.size() << endl;
 				for (int i = 0; i < startPoints.size(); i++)
 				{
@@ -210,15 +213,15 @@ void detectHand(Mat handDetectionImage, Mat& src)
 							1, Scalar(0, 0, 0), 2);
 
 				}
-				cout << "depth_size: " << depthPoints.size() << endl;
-				for (int i = 0; i < depthPoints.size(); i++)
+				cout << "depth_size: " << farPoints.size() << endl;
+				for (int i = 0; i < farPoints.size(); i++)
 				{
 
 					// draw circle at the point for display purpose
-					circle(src, depthPoints[i], 10, Scalar(255, 0, 0), -1);
+					circle(src, farPoints[i], 10, Scalar(255, 0, 0), -1);
 					putText(src, "D" + intToString(i),
-							Point(depthPoints[i].x - 3, depthPoints[i].y - 4),
-							1, 1, Scalar(0, 0, 0), 2);
+							Point(farPoints[i].x - 3, farPoints[i].y - 4), 1,
+							1, Scalar(0, 0, 0), 2);
 				}
 
 				// calculate the final points by eliminating the points that are too close to each other
@@ -233,7 +236,11 @@ void detectHand(Mat handDetectionImage, Mat& src)
 				Point centerofGravity = Point(momentum.m10 / momentum.m00,
 						momentum.m01 / momentum.m00);
 				// draw center of gravity
+
 				circle(src, centerofGravity, 10, Scalar(0, 0, 255), -1);
+				putText(src, "Center of gravity",
+						Point(centerofGravity.x - 3, centerofGravity.y - 4), 1,
+						1, Scalar(0, 0, 0), 2);
 
 				cout << "finalPoints size: " << finalPoints.size() << endl;
 				// iterate through each points in the list of final points
@@ -278,7 +285,7 @@ void createTrackbars()
 
 vector<Vec4i> eleminateDefectsByDimentation(vector<Vec4i> defects,
 		vector<Point> contours, vector<Point>& startPoints,
-		vector<Point>& endPoints, vector<Point>&depthPoints)
+		vector<Point>& endPoints, vector<Point>&farPoints)
 {
 	//------------------------------------------------------
 	// eliminate defects by its Dimentation
@@ -294,31 +301,24 @@ vector<Vec4i> eleminateDefectsByDimentation(vector<Vec4i> defects,
 		Point ptEnd(contours[defects[i][1]]);
 		// get the depth point of the defect
 		Point ptFar(contours[defects[i][2]]);
-		// calculate distance from starting point to depth point
-		float distance1 = distanceP2P(ptStart, ptFar);
-		// calculate destance from ending point to depth point
-		float distance2 = distanceP2P(ptEnd, ptFar);
 		// calculate the angle between line(start,far) and line(end,far)
 		float angle = getAngle(ptStart, ptFar, ptEnd);
 
-		cout << "distance1: " << distance1 << endl;
-		cout << "distance2: " << distance2 << endl;
 		cout << "angle: " << angle << endl;
 
 		// check if the distance and angle are within the predefined constrant
-		/*if ((distance1 >= dis_min) && (distance1 <= dis_max) && (distance2
-		 >= dis_min) && (distance2 <= dis_max) && (angle >= angle_min)
-		 && (angle <= angle_max))*/
 		const Vec4i& v = defects[i];
 		float depth = v[3] / 256;
 		if (depth > 10) //  filter defects by depth
-
 		{
-			// add the defect to the list of filtered defects
-			filteredDefects.push_back(defects[i]);
-			startPoints.push_back(ptStart);
-			endPoints.push_back(ptEnd);
-			depthPoints.push_back(ptFar);
+			if ((angle >= angle_min) && (angle <= angle_max))
+			{
+				// add the defect to the list of filtered defects
+				filteredDefects.push_back(defects[i]);
+				startPoints.push_back(ptStart);
+				endPoints.push_back(ptEnd);
+				farPoints.push_back(ptFar);
+			}
 		}
 	}
 	cout << "startPoint_size(in function): " << startPoints.size() << endl;
