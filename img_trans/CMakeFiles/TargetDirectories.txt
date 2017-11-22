@@ -1,3 +1,0 @@
-/home/bilal/Vision/week8/img_trans/CMakeFiles/edit_cache.dir
-/home/bilal/Vision/week8/img_trans/CMakeFiles/rebuild_cache.dir
-/home/bilal/Vision/week8/img_trans/CMakeFiles/img_transf.dir
