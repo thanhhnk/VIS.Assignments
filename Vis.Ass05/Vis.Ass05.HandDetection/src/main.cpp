@@ -1,7 +1,11 @@
 #include "opencv2/opencv.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include <stdlib.h>
+#include <stdio.h>
 #include <iostream>
+#include <math.h>
 
 using namespace std;
 using namespace cv;
@@ -152,7 +156,7 @@ void findBiggestContour()
 	int largest_contour_index=0;
 	Rect bounding_rect;
  
-	vector<vector<Point>> contours; // Vector for storing contour
+	std::vector< std::vector< cv::Point> >contours; // Vector for storing contour
     vector<Vec4i> hierarchy;
     
 	findContours(thresh_hold, contours, hierarchy,CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE ); // Find the contours in the image
@@ -189,7 +193,7 @@ void findBiggestContour()
 						Point(x, y),1,1,Scalar(0,255,0),2);
 						
 	/// Find the convex hull object for each contour and convexitydefects
-	vector<vector<Point>> hull(contours.size());
+	std::vector< std::vector<cv::Point> > hull(contours.size());
 	vector<int> hullI;
 	//vector<vector<Vec4i>> defects(contours.size());
 	vector<Vec4i> defects;
