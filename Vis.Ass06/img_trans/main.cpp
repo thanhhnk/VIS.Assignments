@@ -15,7 +15,8 @@ vector<cv::Point2i> imageB_ptBs;
 int pt_counterA = 0, pt_counterB = 0;
 Mat *A = NULL;
 Mat *B = NULL;
-
+Mat *invA = NULL;
+Mat *X = NULL;
 
 //Functions
 void displayGraphics();
@@ -62,6 +63,9 @@ int main(int argc, char *argv[])
 	waitKey(0);
 	delete A;
 	delete B;
+	delete invA;
+	delete X;
+	
 	return 0;
 }
 
@@ -108,14 +112,27 @@ void onMouseB(int evt, int x, int y, int flags, void* param)
     {
 		if(pt_counterA >= 4 && pt_counterB >= 4)
 		{
-			A = new Mat(imageA_ptAs.size()*2, 4, CV_32S);
+			A = new Mat(imageA_ptAs.size()*2, 4, CV_32F);
 			populateMatrixA(imageA_ptAs, imageA_ptAs.size()*2, A);
-			B = new Mat(imageB_ptBs.size()*2,1, CV_32S); 
+			B = new Mat(imageB_ptBs.size()*2,1, CV_32F); 
 			populateMatrixB(imageB_ptBs, imageB_ptBs.size()*2, B);
 			printPointsInVector(imageA_ptAs);
 			printPointsInMatrix(*A);
 			printPointsInVector(imageB_ptBs);
 			printPointsInMatrix(*B);
+			
+			invA = new Mat(imageA_ptAs.size()*2, 4, CV_32F);
+			
+			invert(*A, *invA, DECOMP_SVD);
+			printPointsInMatrix(*invA);
+			
+			X = new Mat(imageB_ptBs.size(), 1, CV_32F);
+			gemm(*invA, *B, 1.0, NULL,0, *X, 0);
+			cout << "Matrix X... " << endl;
+			printPointsInMatrix(*X);
+			//float theta1 = acos(X->at<float>(1, 0));
+			//float theta2 = asin(X->at<float>(2, 0));
+			//cout << "theta 1: " << theta1*180/M_PI << ",\ttheta2: " << theta2*180/M_PI << endl;
 		}
 	}
 }
@@ -136,7 +153,7 @@ void printPointsInMatrix(const Mat mat)
 		cout << "[\t";
 		for(int j = 0; j < mat.cols; j++)
 		{
-			cout << +(mat.at<int>(i,j)) << "\t";
+			cout << +(mat.at<float>(i,j)) << "\t";
 			if(j >= mat.cols-1)
 			{
 				cout << " ]" << endl;
@@ -154,17 +171,17 @@ void populateMatrixA(vector<cv::Point2i> vecPts, int rowSize, Mat* A)
 	{
 		if(i%2 == 0)
 		{
-			A->at<int>(i, 0) = (int)vecPts[j].x;
-			A->at<int>(i, 1) = (int)(-1*vecPts[j].y);
-			A->at<int>(i, 2) = 1;
-			A->at<int>(i, 3) = 0;
+			A->at<float>(i, 0) = (float)vecPts[j].x;
+			A->at<float>(i, 1) = (float)(-1*vecPts[j].y);
+			A->at<float>(i, 2) = 1;
+			A->at<float>(i, 3) = 0;
 		}
 		else
 		{
-			A->at<int>(i, 0) = (int)vecPts[j].y;
-			A->at<int>(i, 1) = (int)vecPts[j].x;
-			A->at<int>(i, 2) = 0;
-			A->at<int>(i, 3) = 1;
+			A->at<float>(i, 0) = (float)vecPts[j].y;
+			A->at<float>(i, 1) = (float)vecPts[j].x;
+			A->at<float>(i, 2) = 0;
+			A->at<float>(i, 3) = 1;
 			j++;
 		}
 	}
@@ -177,11 +194,11 @@ void populateMatrixB(vector<cv::Point2i> vecPts, int rowSize, Mat* B)
 	{
 		if(i%2 == 0)
 		{
-			B->at<int>(i, 0) = (int)vecPts[j].x;
+			B->at<float>(i, 0) = (float)vecPts[j].x;
 		}
 		else
 		{
-			B->at<int>(i, 0) = (int)vecPts[j].y;
+			B->at<float>(i, 0) = (float)vecPts[j].y;
 			j++;
 		}
 	}
