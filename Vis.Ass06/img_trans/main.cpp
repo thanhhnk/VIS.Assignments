@@ -9,9 +9,9 @@ using namespace cv;
 
 //Variables
 Mat imageA, imageB;
-int a_X, a_Y, b_X, b_Y; ; 
-vector<cv::Point2i> imageA_ptAs;
-vector<cv::Point2i> imageB_ptBs;
+float a_X, a_Y, b_X, b_Y;
+vector<cv::Point2f> imageA_ptAs;
+vector<cv::Point2f> imageB_ptBs;
 int pt_counterA = 0, pt_counterB = 0;
 Mat *A = NULL;
 Mat *B = NULL;
@@ -19,13 +19,24 @@ Mat *invA = NULL;
 Mat *X = NULL;
 
 //Functions
+/* Simple function for displaying the two images A and B in the namedWindows provided*/
 void displayGraphics();
+/*Event handler function that is passed to function setMouseCallback for
+a provided namedWindows A and B. The x and y parameters store the coordinate for clicks
+and evt parameter corresponds to event types enum such as EVENT_LBUTTONDOWN etc.*/
 void onMouseA(int evt, int x, int y, int flags, void* param);
 void onMouseB(int evt, int x, int y, int flags, void* param);
-void printPointsInVector(const vector<cv::Point2i> point_vec);
-void populateMatrixA(vector<cv::Point2i> vecPts, int rowSize, Mat* A);
-void populateMatrixB(vector<cv::Point2i> vecPts, int rowSize, Mat* B);
+/*Prints the points in a vector of Points*/
+void printPointsInVector(const vector<cv::Point2f> point_vec);
+/*Puts the points collected in vector of Points imageA_ptAs in matrix A according to the outline provided in the slide.
+The result is put in matrix A and only the row-size of matrix A varies the number columns is always 4.*/
+void populateMatrixA(vector<cv::Point2f> vecPts, int rowSize, Mat* A);
+/*Puts the points collected in vector of Points imageB_ptBs in matrix B according to the outline provided in the slide.
+The result is put in matrix B and only the row-size of matrix B varies the number columns is always 4.*/
+void populateMatrixB(vector<cv::Point2f> vecPts, int rowSize, Mat* B);
+/*Simple function for printing the elements of the matrix provided in the parameter*/
 void printPointsInMatrix(const Mat mat);
+/*Takes the opencv data type provided in the argument and returns it as a well understood string*/
 string type2str(int type);
 
 int main(int argc, char *argv[])
@@ -77,24 +88,29 @@ void displayGraphics()
 	imshow("ImageB", imageB);
 }
 
-
+/*For the mouse clicks on image A we store the clicked coordinates in vector of Points imageA_ptAs, and the 
+pt_counterA keeps track of the number of clicks on image A. We only need 4 click points after which no further points
+will be added to imageA_ptAs*/
 void onMouseA(int evt, int x, int y, int flags, void* param) 
 {
     if(evt == EVENT_LBUTTONDOWN) 
     {
         a_X = x;
         a_Y = y;
-        cout<<"Image A: X = " << a_X << ", Y = " << a_Y<<endl;
         if(pt_counterA < 4)
         {
-			imageA_ptAs.push_back(cv::Point2i(x,y));
-			printPointsInVector(imageA_ptAs);
+			cout<<"Image A: X = " << a_X << ", Y = " << a_Y<<endl;
+			imageA_ptAs.push_back(cv::Point2f(a_X,a_Y));
+			//printPointsInVector(imageA_ptAs);
 		}
         pt_counterA++;
     }
 }
 
-
+/*For the mouse clicks on image B we store the clicked coordinates in vector of Points imageB_ptBs, and the 
+pt_counterB keeps track of the number of clicks on image B. We only need 4 click points after which no further points
+will be added to imageB_ptBs. Furthermore we assume at this point you have 4 points in imageA_ptAs and imageB_ptBs, clicking
+on the right click button on image B will do the rest of the processing for finding matrix X.*/
 void onMouseB(int evt, int x, int y, int flags, void* param) 
 {
     if(evt == EVENT_LBUTTONDOWN) 
@@ -104,7 +120,8 @@ void onMouseB(int evt, int x, int y, int flags, void* param)
         cout<<"Image B: X = " << b_X << ", Y = " << b_Y<<endl;
         if(pt_counterB < 4)
         {
-			imageB_ptBs.push_back(cv::Point2i(x,y));
+			cout<<"Image B: X = " << b_X << ", Y = " << b_Y<<endl;
+			imageB_ptBs.push_back(cv::Point2f(b_X,b_Y));
 		}
         pt_counterB++;
     }
@@ -125,20 +142,24 @@ void onMouseB(int evt, int x, int y, int flags, void* param)
 			
 			invert(*A, *invA, DECOMP_SVD);
 			printPointsInMatrix(*invA);
-			
+			/*At this point we have matrices A, b and inverse of A. We proceed to compute matrix X by multiplying 
+			 matrix inverse of A with matrix b*/
 			X = new Mat(imageB_ptBs.size(), 1, CV_32F);
-			gemm(*invA, *B, 1.0, NULL,0, *X, 0);
+			gemm(*invA, *B, 1.0, NULL,0, *X, 0);/*Matrix multiplication between inverse A and B*/
 			cout << "Matrix X... " << endl;
 			printPointsInMatrix(*X);
 			
-			float theta1 = acos(X->at<float>(0, 0));
+			float theta1 = acos(X->at<float>(0, 0));/*If our points are accurate the theta we get from arccos and arcsin should be the same*/
 			float theta2 = asin(X->at<float>(1, 0));
 			cout << "theta 1: " << theta1*180/M_PI << ",\ttheta2: " << theta2*180/M_PI << endl;
+			
+			Mat M = getPerspectiveTransform(imageA_ptAs, imageB_ptBs);
+			printPointsInMatrix(M);
 		}
 	}
 }
 
-void printPointsInVector(const vector<cv::Point2i> point_vec)
+void printPointsInVector(const vector<cv::Point2f> point_vec)
 {
 	for(int i = 0; i < point_vec.size(); i++)
 	{
@@ -165,7 +186,7 @@ void printPointsInMatrix(const Mat mat)
 
 
 
-void populateMatrixA(vector<cv::Point2i> vecPts, int rowSize, Mat* A)
+void populateMatrixA(vector<cv::Point2f> vecPts, int rowSize, Mat* A)
 {
 	int j = 0;
 	for(int i = 0; i < rowSize; i++)
@@ -188,7 +209,7 @@ void populateMatrixA(vector<cv::Point2i> vecPts, int rowSize, Mat* A)
 	}
 }
 
-void populateMatrixB(vector<cv::Point2i> vecPts, int rowSize, Mat* B)
+void populateMatrixB(vector<cv::Point2f> vecPts, int rowSize, Mat* B)
 {
 	int j = 0;
 	for(int i = 0; i < rowSize; i++)
