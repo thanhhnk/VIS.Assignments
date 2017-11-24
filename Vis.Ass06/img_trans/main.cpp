@@ -130,9 +130,10 @@ void onMouseB(int evt, int x, int y, int flags, void* param)
 			gemm(*invA, *B, 1.0, NULL,0, *X, 0);
 			cout << "Matrix X... " << endl;
 			printPointsInMatrix(*X);
-			//float theta1 = acos(X->at<float>(1, 0));
-			//float theta2 = asin(X->at<float>(2, 0));
-			//cout << "theta 1: " << theta1*180/M_PI << ",\ttheta2: " << theta2*180/M_PI << endl;
+			
+			float theta1 = acos(X->at<float>(0, 0));
+			float theta2 = asin(X->at<float>(1, 0));
+			cout << "theta 1: " << theta1*180/M_PI << ",\ttheta2: " << theta2*180/M_PI << endl;
 		}
 	}
 }
