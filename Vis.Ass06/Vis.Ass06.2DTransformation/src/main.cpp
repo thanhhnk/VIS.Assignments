@@ -20,7 +20,6 @@ Mat *A = NULL;
 Mat *B = NULL;
 Mat *invA = NULL;
 Mat *X = NULL;
-Mat M_X;
 
 //Functions
 /* Simple function for displaying the two images A and B in the namedWindows provided*/
@@ -74,15 +73,6 @@ int main(int argc, char *argv[])
 	cv::setMouseCallback("ImageB", onMouseB, NULL);
 
 	//cv::imshow("Output Window", frame);
-
-	cv::Mat TransformedImangeWithM_X;
-	//TODO - Debugs this
-	//cv::warpPerspective(imageA, TransformedImangeWithM_X, M_X, TransformedImangeWithM_X.size());
-	//imshow("warpPerspectiveWithM_X", TransformedImangeWithM_X);
-
-
-	//Mat M_getPers = getPerspectiveTransform(imageA_ptAs, imageB_ptBs);
-	//printPointsInMatrix(M_getPers, "M_getPerspectiveTransform");
 
 	displayGraphics();
 
@@ -141,10 +131,29 @@ void onMouseB(int evt, int x, int y, int flags, void* param)
 	}
 	if (evt == EVENT_RBUTTONDOWN)
 	{
+		Mat M_X;
 		if (pt_counterA >= 4 && pt_counterB >= 4)
 		{
 			M_X = findTransformMatrix(imageA_ptAs, imageB_ptBs);
+			cout << "After get M_X" << endl;
 		}
+
+		cv::Mat TransformedImangeWithM_X;
+
+		//Square least tramsforamtion
+		cv::warpPerspective(imageA, TransformedImangeWithM_X, M_X,
+				TransformedImangeWithM_X.size());
+		namedWindow("warpPerspectiveWith_M_X", CV_WINDOW_NORMAL);
+		imshow("warpPerspectiveWith_M_X", TransformedImangeWithM_X);
+
+		//OpenCV transformation
+		Mat M_getPers = getPerspectiveTransform(imageA_ptAs, imageB_ptBs);
+		printPointsInMatrix(M_getPers, "M_getPerspectiveTransform");
+		cv::warpPerspective(imageA, TransformedImangeWithM_X, M_getPers,
+				TransformedImangeWithM_X.size());
+		namedWindow("warpPerspectiveWith_M_getPers", CV_WINDOW_NORMAL);
+		imshow("warpPerspectiveWith_M_getPers", TransformedImangeWithM_X);
+
 	}
 }
 
@@ -169,28 +178,31 @@ Mat findTransformMatrix(vector<cv::Point2f> imageA_ptAs,
 	X = new Mat(imageB_ptBs.size(), 1, CV_32F);
 	gemm(*invA, *B, 1.0, NULL, 0, *X, 0);/*Matrix multiplication between inverse A and B*/
 	printPointsInMatrix(*X, "X");
-
-	float theta1 = acos(X->at<float> (0, 0));/*If our points are accurate the theta we get from arccos and arcsin should be the same*/
+	/*If our points are accurate the theta we get from arccos and arcsin should be the same*/
+	float theta1 = acos(X->at<float> (0, 0));
 	float theta2 = asin(X->at<float> (1, 0));
 	cout << "theta 1: " << theta1 * 180 / M_PI << ",\ttheta2: " << theta2 * 180
 			/ M_PI << endl;
 
-	Mat* M_fromX = new Mat(3,3, CV_32F);
+	Mat* M_fromX = new Mat(3, 3, CV_32F);
 	//(0,0) is cos, (1,0) is sin
-	M_fromX->at<float>(0,0) = X->at<float> (0,0); //costheta
-	M_fromX->at<float>(0,1) = -(X->at<float> (1,0)); //-sinTheta
-	M_fromX->at<float>(0,2) = X->at<float> (2,0);//tx
-	M_fromX->at<float>(1,0) = X->at<float> (1,0); //sintheta
-	M_fromX->at<float>(1,1) = X->at<float> (0,0); //cosTheta
-	M_fromX->at<float>(1,2) = X->at<float> (3,0);
-	M_fromX->at<float>(2,0) = 0;
-	M_fromX->at<float>(2,1) = 0;
+	M_fromX->at<float> (0, 0) = X->at<float> (0, 0); //costheta
+	M_fromX->at<float> (0, 1) = -(X->at<float> (1, 0)); //-sinTheta
+	M_fromX->at<float> (0, 2) = X->at<float> (2, 0);//tx
+	M_fromX->at<float> (1, 0) = X->at<float> (1, 0); //sintheta
+	M_fromX->at<float> (1, 1) = X->at<float> (0, 0); //cosTheta
+	M_fromX->at<float> (1, 2) = X->at<float> (3, 0);
+	M_fromX->at<float> (2, 0) = 0;
+	M_fromX->at<float> (2, 1) = 0;
+	M_fromX->at<float> (2, 2) = 1;
 
-	Mat  M;
-	//(*M_fromX).copyTo(M);
-	cout <<  M.size();
+	Mat M;
+	(*M_fromX).copyTo(M);
+	cout << "M size" << M.size() << endl;
+	printPointsInMatrix(M, "m");
+
 	delete M_fromX;
-	return  M;
+	return M;
 }
 void printPointsInVector(const vector<cv::Point2f> point_vec)
 {
