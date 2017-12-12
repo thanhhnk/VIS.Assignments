@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<launchConfiguration type="org.eclipse.cdt.launch.applicationLaunchType">
+<intAttribute key="org.eclipse.cdt.launch.ATTR_BUILD_BEFORE_LAUNCH_ATTR" value="2"/>
+<stringAttribute key="org.eclipse.cdt.launch.COREFILE_PATH" value=""/>
+<stringAttribute key="org.eclipse.cdt.launch.PROGRAM_ARGUMENTS" value="src/ImageA.jpg&#10;src/ImageB.jpg"/>
+<stringAttribute key="org.eclipse.cdt.launch.PROGRAM_NAME" value="/home/viki/Dropbox/1.Fonys.Docs/ESA.VIS/Projects/VIS.Assignments.git/Vis.Ass07/Vis.Ass07.CameraCalibaration/Debug/Vis.Ass07.CameraCallibration"/>
+<stringAttribute key="org.eclipse.cdt.launch.PROJECT_ATTR" value="Vis.Ass07.CameraCallibration"/>
+<stringAttribute key="org.eclipse.cdt.launch.PROJECT_BUILD_CONFIG_ID_ATTR" value="cdt.managedbuild.config.gnu.exe.debug.718303934"/>
+<booleanAttribute key="org.eclipse.cdt.launch.use_terminal" value="true"/>
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
+<listEntry value="/Vis.Ass07.CameraCallibration"/>
+</listAttribute>
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
+<listEntry value="4"/>
+</listAttribute>
+</launchConfiguration>

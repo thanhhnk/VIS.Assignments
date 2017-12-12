@@ -1,0 +1,19 @@
+!SESSION 2017-12-06 14:39:08.333 -----------------------------------------------
+eclipse.buildId=M20110210-1200
+java.version=1.8.0_144
+java.vendor=Oracle Corporation
+BootLoader constants: OS=linux, ARCH=x86, WS=gtk, NL=en_US
+Framework arguments:  -product org.eclipse.epp.package.cpp.product -product org.eclipse.epp.package.cpp.product
+Command-line arguments:  -os linux -ws gtk -arch x86 -product org.eclipse.epp.package.cpp.product -data /home/viki/Dropbox/1.Fonys.Docs/ESA.VIS/Projects/VIS.Assignments.git -product org.eclipse.epp.package.cpp.product
+
+!ENTRY org.eclipse.cdt.core 1 0 2017-12-06 14:43:03.266
+!MESSAGE Indexed 'Vis.Ass07.CameraCalibration' (1 sources, 13 headers) in 0.96 sec: 95 declarations; 201 references; 21 unresolved inclusions; 0 syntax errors; 233 unresolved names (44.05%)
+
+!ENTRY org.eclipse.cdt.core 1 0 2017-12-06 14:44:21.881
+!MESSAGE Indexed 'Vis.Ass06.2DTransformation' (1 sources, 13 headers) in 0.29 sec: 95 declarations; 201 references; 21 unresolved inclusions; 0 syntax errors; 233 unresolved names (44.05%)
+
+!ENTRY org.eclipse.cdt.core 1 0 2017-12-06 14:48:52.821
+!MESSAGE Indexed 'Vis.Ass06.2DTransformation' (1 sources, 345 headers) in 18.18 sec: 46,500 declarations; 80,939 references; 0 unresolved inclusions; 6 syntax errors; 421 unresolved names (0.33%)
+
+!ENTRY org.eclipse.cdt.core 1 0 2017-12-06 14:49:26.378
+!MESSAGE Indexed 'Vis.Ass07.CameraCallibration' (0 sources, 78 headers) in 1.94 sec: 2,277 declarations; 2,596 references; 0 unresolved inclusions; 0 syntax errors; 2 unresolved names (0.04%)
