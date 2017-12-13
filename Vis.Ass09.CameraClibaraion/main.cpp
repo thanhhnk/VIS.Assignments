@@ -15,6 +15,7 @@ int main(int argc, char *argv[])
 	
 	Mat camera_matrix, distortion_coefficients;
 	
+	//Get camera_maxtrix and distortion cofficients from the yml file
 	fs["camera_matrix"] >> camera_matrix;
 	fs["distortion_coefficients"] >> distortion_coefficients;
 	
