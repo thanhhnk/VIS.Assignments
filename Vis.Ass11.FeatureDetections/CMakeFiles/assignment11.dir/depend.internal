@@ -10,6 +10,7 @@ CMakeFiles/assignment11.dir/main.cpp.o
  /usr/local/include/opencv2/core/affine.hpp
  /usr/local/include/opencv2/core/base.hpp
  /usr/local/include/opencv2/core/bufferpool.hpp
+ /usr/local/include/opencv2/core/core.hpp
  /usr/local/include/opencv2/core/core_c.h
  /usr/local/include/opencv2/core/cuda.hpp
  /usr/local/include/opencv2/core/cuda.inl.hpp
@@ -78,6 +79,7 @@ CMakeFiles/assignment11.dir/main.cpp.o
  /usr/local/include/opencv2/imgproc/imgproc_c.h
  /usr/local/include/opencv2/imgproc/types_c.h
  /usr/local/include/opencv2/ml.hpp
+ /usr/local/include/opencv2/ml/ml.inl.hpp
  /usr/local/include/opencv2/objdetect.hpp
  /usr/local/include/opencv2/objdetect/detection_based_tracker.hpp
  /usr/local/include/opencv2/objdetect/objdetect_c.h
@@ -130,3 +132,6 @@ CMakeFiles/assignment11.dir/main.cpp.o
  /usr/local/include/opencv2/viz/viz3d.hpp
  /usr/local/include/opencv2/viz/vizcore.hpp
  /usr/local/include/opencv2/viz/widgets.hpp
+ /usr/local/include/opencv2/xfeatures2d.hpp
+ /usr/local/include/opencv2/xfeatures2d/cuda.hpp
+ /usr/local/include/opencv2/xfeatures2d/nonfree.hpp

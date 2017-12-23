@@ -19,6 +19,14 @@ iostream
 -
 string
 -
+opencv2/core/core.hpp
+/home/viki/Dropbox/1.Fonys.Docs/ESA.VIS/Projects/VIS.Assignments.git/Vis.Ass11.FeatureDetections/opencv2/core/core.hpp
+opencv2/features2d.hpp
+/home/viki/Dropbox/1.Fonys.Docs/ESA.VIS/Projects/VIS.Assignments.git/Vis.Ass11.FeatureDetections/opencv2/features2d.hpp
+opencv2/xfeatures2d.hpp
+/home/viki/Dropbox/1.Fonys.Docs/ESA.VIS/Projects/VIS.Assignments.git/Vis.Ass11.FeatureDetections/opencv2/xfeatures2d.hpp
+vector
+-
 
 /usr/local/include/opencv/cxcore.h
 opencv2/core/core_c.h
@@ -93,6 +101,10 @@ opencv2/core/vsx_utils.hpp
 /usr/local/include/opencv2/core/opencv2/core/vsx_utils.hpp
 
 /usr/local/include/opencv2/core/bufferpool.hpp
+
+/usr/local/include/opencv2/core/core.hpp
+opencv2/core.hpp
+/usr/local/include/opencv2/core/opencv2/core.hpp
 
 /usr/local/include/opencv2/core/core_c.h
 opencv2/core/types_c.h
@@ -867,6 +879,10 @@ map
 -
 iostream
 -
+opencv2/ml/ml.inl.hpp
+-
+
+/usr/local/include/opencv2/ml/ml.inl.hpp
 
 /usr/local/include/opencv2/objdetect.hpp
 opencv2/core.hpp
@@ -1319,4 +1335,18 @@ opencv2/viz/viz3d.hpp
 /usr/local/include/opencv2/viz/widgets.hpp
 opencv2/viz/types.hpp
 -
+
+/usr/local/include/opencv2/xfeatures2d.hpp
+opencv2/features2d.hpp
+/usr/local/include/opencv2/opencv2/features2d.hpp
+opencv2/xfeatures2d/nonfree.hpp
+/usr/local/include/opencv2/opencv2/xfeatures2d/nonfree.hpp
+
+/usr/local/include/opencv2/xfeatures2d/cuda.hpp
+opencv2/core/cuda.hpp
+/usr/local/include/opencv2/xfeatures2d/opencv2/core/cuda.hpp
+
+/usr/local/include/opencv2/xfeatures2d/nonfree.hpp
+opencv2/features2d.hpp
+/usr/local/include/opencv2/xfeatures2d/opencv2/features2d.hpp
 

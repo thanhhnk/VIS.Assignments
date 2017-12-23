@@ -1,1 +1,14 @@
-./assignment11 ./images/building*
+1 - For running the applications ./assignment11 ./images/building*
+2 - remake the opencv to get the build with nonfree libary 
+    cmake -D OPENCV_ENABLE_NONFREE=ON -D CMAKE_INSTALL_PREFIX=/usr/local ..
+    make -j7
+    sudo make install
+3 - Run this following command
+
+sudo add-apt-repository --yes ppa:xqms/opencv-nonfree
+sudo apt-get update
+sudo apt-get install libopencv-nonfree-dev
+
+---
+cmake -D -DINSTALL_CREATE_DISTRIB=ON -D CMAKE_INSTALL_PREFIX=/usr/local ..
+cmake -DOPENCV_EXTRA_MODULES_PATH=/home/viki/opencv_contrib/modules -D CMAKE_INSTALL_PREFIX=/usr/local ..
