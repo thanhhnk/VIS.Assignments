@@ -9,6 +9,9 @@ sudo add-apt-repository --yes ppa:xqms/opencv-nonfree
 sudo apt-get update
 sudo apt-get install libopencv-nonfree-dev
 
----
+---If the nonfree doesnot work, using xfeature2D
 cmake -D -DINSTALL_CREATE_DISTRIB=ON -D CMAKE_INSTALL_PREFIX=/usr/local ..
-cmake -DOPENCV_EXTRA_MODULES_PATH=/home/viki/opencv_contrib/modules -D CMAKE_INSTALL_PREFIX=/usr/local ..
+--To get xfeature2D
+https://github.com/opencv/opencv_contrib
+sudo cmake -DOPENCV_EXTRA_MODULES_PATH=/home/viki/opencv_contrib/modules -D CMAKE_INSTALL_PREFIX=/usr/local ..
+make -j5

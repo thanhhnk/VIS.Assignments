@@ -22,23 +22,33 @@ bool try_use_gpu = false; //Try for now
 string result_name = "result.jpg";
 int parseCmdArgs(int argc, char **argv);
 int stitchingTwoImages(Mat imag1, Mat imag2);
+int stitchingTwoImages(Mat imag1, Mat imag2, Mat &result);
 
 int main(int argc, char *argv[])
 {
-	//initModule_nonfree();//THIS LINE IS IMPORTANT 
 	int retval = parseCmdArgs(argc, argv);
 	if (retval)
 		return -1;
-	Mat pano;
+	Mat panoOpenCV;
 	/*Using openCV stitcher*/
 	Ptr<Stitcher> stitcher = Stitcher::create(mode, try_use_gpu);
-	Stitcher::Status status = stitcher->stitch(imgs, pano);
-
+	Stitcher::Status status = stitcher->stitch(imgs, panoOpenCV);
 	if (status != Stitcher::OK)
 	{
 		cout << "Can't stitch images, error code = " << int(status) << endl;
 		return -1;
 	}
+	else
+		imshow("stitchedImageOpenCV", panoOpenCV);
+
+	//TODO - Debugs this
+	Mat pano;
+	stitchingTwoImages(imgs[2], imgs[1], pano);
+	stitchingTwoImages(imgs[0], pano, pano);
+	stitchingTwoImages(pano, imgs[3], pano);
+	stitchingTwoImages(pano, imgs[4], pano);
+
+	
 	//NOTE! It is should start from image 3
 	//The hight and with of the result image needed to be adjust following the distance results
 
@@ -47,10 +57,12 @@ int main(int argc, char *argv[])
 	cout << "stitching completed successfully\n"
 		 << result_name << " saved!";
 
+
+	waitKey(0);
 	return 0;
 }
 
-int stitchingTwoImages(Mat imag1, Mat imag2)
+int stitchingTwoImages(Mat imag1, Mat imag2, Mat &result)
 {
 	//initModule_nonfree();
 
@@ -77,14 +89,12 @@ int stitchingTwoImages(Mat imag1, Mat imag2)
 	detector->detect(gray_image1, keypoints_1);
 	detector->detect(gray_image2, keypoints_2);
 
-
 	//--Step 2 : Calculate Descriptors (feature vectors)
 	//SurfDescriptorExtractor extractor;
 	Ptr<SURF> extractor = SURF::create();
 	Mat descriptors_img1, descriptors_img2;
 	extractor->compute(gray_image1, keypoints_1, descriptors_img1);
 	extractor->compute(gray_image2, keypoints_2, descriptors_img2);
-
 
 	//--Step 3 : Matching descriptor vectors using FLANN matcher
 	FlannBasedMatcher matcher;
@@ -112,41 +122,27 @@ int stitchingTwoImages(Mat imag1, Mat imag2)
 			good_matches.push_back(matches[i]);
 		}
 	}
-	std::vector<Point2f> obj;
-	std::vector<Point2f> scene;
+	std::vector<Point2f> features_image1;
+	std::vector<Point2f> features_image2;
 	for (int i = 0; i < good_matches.size(); i++)
 	{
 		//--Get the keypoints from the good matches
-		obj.push_back(keypoints_1[good_matches[i].queryIdx].pt);
-		scene.push_back(keypoints_2[good_matches[i].trainIdx].pt);
+		features_image1.push_back(keypoints_1[good_matches[i].queryIdx].pt);
+		features_image2.push_back(keypoints_2[good_matches[i].trainIdx].pt);
 	}
-	//Find the Homography Matrix
-	Mat H = findHomography(obj, scene, CV_RANSAC);
+	//Find the Homography Matrix, the trasform matrix between matched keypoints (Tn)
+	//that maps I(n) in to I(n-1)
+	Mat H = findHomography(features_image1, features_image2, CV_RANSAC);
 	// Use the homography Matrix to warp the images
-	cv::Mat result;
+	//cv::Mat result;
 	warpPerspective(imag1, result, H, cv::Size(imag1.cols + imag2.cols, imag1.rows));
 	cv::Mat half(result, cv::Rect(0, 0, imag2.cols, imag2.rows));
 	imag2.copyTo(half);
-	/* To remove the black portion after stitching, and confine in a rectangular region*/
-	// vector with all non-black point positions
-	std::vector<cv::Point> nonBlackList;
-	nonBlackList.reserve(result.rows * result.cols);
-	// add all non-black points to the vector
-	// there are more efficient ways to iterate through the image
-	for (int j = 0; j < result.rows; ++j)
-		for (int i = 0; i < result.cols; ++i)
-		{
-			// if not black: add to the list
-			if (result.at<cv::Vec3b>(j, i) != cv::Vec3b(0, 0, 0))
-			{
-				nonBlackList.push_back(cv::Point(i, j));
-			}
-		}
-	// create bounding rect around those points
-	cv::Rect bb = cv::boundingRect(nonBlackList);
-	// display result and save it
-	cv::imshow("Result", result(bb));
+	//Step of computing the transformation that maps I(n) into the panorama images as T(1)*T(n-1)*T(n)
+	
+	return 0;
 }
+
 int parseCmdArgs(int argc, char **argv)
 {
 	if (argc == 1)
