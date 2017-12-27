@@ -41,20 +41,15 @@ int main(int argc, char *argv[])
 	// else
 	// 	imshow("stitchedImageOpenCV", panoOpenCV);
 
-	//TODO - Debugs this
-	Mat pano23;
-	stitchingTwoImages(imgs[2], imgs[3], pano23);
-	imshow("stitching imgs[2] & imgs[3]", pano23);
-	Mat pano234;
-	stitchingTwoImages(pano23, imgs[4], pano234);
-	imshow("stitching imgs[2][3][4]", pano234);
-	//stitchingTwoImages(imgs[1], pano, pano);
-	//stitchingTwoImages(imgs[0], pano, pano);
-
+	
 	//NOTE! It is should start from image 3
 	//The hight and with of the result image needed to be adjust following the distance results
 
-	// imshow("stitching completed imaged", pano);
+	Mat pano;
+	stitchingTwoImages(imgs[0], imgs[1], pano);
+	imshow("Image.00", imgs[0]);
+	imshow("Image.01", imgs[1]);
+	imshow("stitching completed imaged", pano);
 	// imwrite(result_name, pano);
 	// cout << "stitching completed successfully\n"
 	// 	 << result_name << " saved!";
@@ -128,41 +123,51 @@ int stitchingTwoImages(Mat imag1, Mat imag2, Mat &result)
 		features_image1.push_back(keypoints_1[good_matches[i].queryIdx].pt);
 		features_image2.push_back(keypoints_2[good_matches[i].trainIdx].pt);
 	}
-	//Find the Homography Matrix, the trasform matrix between matched keypoints (Tn)
-	//that maps I(n) in to I(n-1)
+	//Find the Homography Matrix
+	//The homography matrix will use these matching points, to estimate a relative orientation transform within the two images
 	Mat H = findHomography(features_image1, features_image2, CV_RANSAC);
 	// Use the homography Matrix to warp the images
-	warpPerspective(imag1, result, H, cv::Size(imag1.cols + imag2.cols, imag1.rows));
-	imshow("image1_result", result);
-	//??copyTo(haft) is wrong
-	cv::Mat half(result, cv::Rect(0, 0, imag2.cols, imag2.rows));
-	imshow("half", half);
-	imag2.copyTo(half);
-	//Step of computing the transformation that maps I(n) into the panorama images as T(1)*T(n-1)*T(n)
-	/* To remove the black portion after stitching, and confine in a rectangular region*/
-	// vector with all non-black point positions
-	std::vector<cv::Point> nonBlackList;
-	nonBlackList.reserve(result.rows * result.cols);
-
-	// add all non-black points to the vector
-	// there are more efficient ways to iterate through the image
-	for (int j = 0; j < result.rows; ++j)
-		for (int i = 0; i < result.cols; ++i)
-		{
-			// if not black: add to the list
-			if (result.at<cv::Vec3b>(j, i) != cv::Vec3b(0, 0, 0))
-			{
-				nonBlackList.push_back(cv::Point(i, j));
-			}
-		}
-
-	// create bounding rect around those points
-	cv::Rect bb = cv::boundingRect(nonBlackList);
-	//assign it back to the result
-	result = result(bb);	
-	// display result and save it
+	Mat warpImage2;
+	warpPerspective(imag2, warpImage2, H, Size(imag2.cols*2, imag2.rows*2), INTER_CUBIC);
 	
-	cv::imshow("Reult", result(bb));
+	imshow("wapImage2", warpImage2);
+	
+
+	Mat final(Size(imag2.cols*2 + imag1.cols, imag2.rows*2),CV_8UC3);
+
+	//Devide final into two parts (ROI - Region of interest)
+	//TODO, bug is here
+	Mat roi1(final, Rect(0, 0,  imag1.cols, imag1.rows));
+	Mat roi2(final, Rect(imag1.cols, 0, warpImage2.cols, warpImage2.rows));
+	warpImage2.copyTo(roi2);
+	imag1.copyTo(roi1);
+	imshow("final", final);
+	result = final;
+
+	// /* To remove the black portion after stitching, and confine in a rectangular region*/
+	// // vector with all non-black point positions
+	// std::vector<cv::Point> nonBlackList;
+	// nonBlackList.reserve(result.rows * result.cols);
+
+	// // add all non-black points to the vector
+	// // there are more efficient ways to iterate through the image
+	// for (int j = 0; j < result.rows; ++j)
+	// 	for (int i = 0; i < result.cols; ++i)
+	// 	{
+	// 		// if not black: add to the list
+	// 		if (result.at<cv::Vec3b>(j, i) != cv::Vec3b(0, 0, 0))
+	// 		{
+	// 			nonBlackList.push_back(cv::Point(i, j));
+	// 		}
+	// 	}
+
+	// // create bounding rect around those points
+	// cv::Rect bb = cv::boundingRect(nonBlackList);
+	// //assign it back to the result
+	// result = result(bb);	
+	// // display result and save it
+	
+	// cv::imshow("Reult", result(bb));
 
 	return 0;
 }
