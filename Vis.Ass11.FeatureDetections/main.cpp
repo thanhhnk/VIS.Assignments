@@ -21,8 +21,8 @@ vector<Mat> imgs;
 bool try_use_gpu = false; //Try for now
 string result_name = "result.jpg";
 int parseCmdArgs(int argc, char **argv);
-int stitchingTwoImages(Mat imag1, Mat imag2);
-int stitchingTwoImages(Mat imag1, Mat imag2, Mat &result);
+int findHomographyMatrix(Mat imag1, Mat imag2, Mat& H, Mat& invert_H);
+int stitchingTwoImages(Mat imag1, Mat imag2, Mat& result);
 
 int main(int argc, char *argv[])
 {
@@ -60,8 +60,68 @@ int main(int argc, char *argv[])
 
 int stitchingTwoImages(Mat imag1, Mat imag2, Mat &result)
 {
-	//initModule_nonfree();
 
+	// Use the homography Matrix to warp the images
+	Mat H, H_Invert;
+	findHomographyMatrix(imag1, imag2, H, H_Invert);
+
+   
+	Mat warpImage2;
+	Mat warpImage1;
+	warpPerspective(imag2, warpImage2, H, Size(imag2.cols*2, imag2.rows*2), INTER_CUBIC);
+	warpPerspective(imag1, warpImage1, H, Size(imag2.cols*2, imag2.rows*2), INTER_CUBIC);
+	imshow("wapImage2", warpImage2);
+    imshow("warpImage1", warpImage1);
+
+	// Mat warpImage_invert2;
+	// Mat warpImage_invert1;
+	// warpPerspective(imag2, warpImage_invert2, H_invert, Size(imag2.cols*2, imag2.rows*2), INTER_CUBIC);
+	// warpPerspective(imag1, warpImage_invert1, H_invert, Size(imag2.cols*2, imag2.rows*2), INTER_CUBIC);
+	// imshow("wapImage2_invert", warpImage_invert2);
+    // imshow("warpImage1_invert", warpImage_invert1);
+
+	Mat final(Size(imag2.cols*2 + imag1.cols, imag2.rows*2),CV_8UC3);
+
+	//Devide final into two parts (ROI - Region of interest)
+	//TODO, bug is here
+	Mat roi1(final, Rect(0, 0,  imag1.cols, imag1.rows));
+	Mat roi2(final, Rect(imag1.cols, 0, warpImage2.cols, warpImage2.rows));
+	warpImage2.copyTo(roi2);
+	//imag1.copyTo(roi1);
+	imag1.copyTo(roi1);
+
+	result = final;
+
+	/* To remove the black portion after stitching, and confine in a rectangular region*/
+	// vector with all non-black point positions
+	std::vector<cv::Point> nonBlackList;
+	nonBlackList.reserve(result.rows * result.cols);
+
+	// add all non-black points to the vector
+	// there are more efficient ways to iterate through the image
+	for (int j = 0; j < result.rows; ++j)
+		for (int i = 0; i < result.cols; ++i)
+		{
+			// if not black: add to the list
+			if (result.at<cv::Vec3b>(j, i) != cv::Vec3b(0, 0, 0))
+			{
+				nonBlackList.push_back(cv::Point(i, j));
+			}
+		}
+
+	// create bounding rect around those points
+	cv::Rect bb = cv::boundingRect(nonBlackList);
+	//assign it back to the result
+	result = result(bb);	
+	// display result and save it
+	
+	cv::imshow("Reult", result(bb));
+
+	return 0;
+}
+
+int findHomographyMatrix(Mat imag1, Mat imag2, Mat& H, Mat& invert_H)
+{
 	Mat gray_image1;
 	Mat gray_image2;
 	//Covert to Grayscale
@@ -125,49 +185,13 @@ int stitchingTwoImages(Mat imag1, Mat imag2, Mat &result)
 	}
 	//Find the Homography Matrix
 	//The homography matrix will use these matching points, to estimate a relative orientation transform within the two images
-	Mat H = findHomography(features_image1, features_image2, CV_RANSAC);
-	// Use the homography Matrix to warp the images
-	Mat warpImage2;
-	warpPerspective(imag2, warpImage2, H, Size(imag2.cols*2, imag2.rows*2), INTER_CUBIC);
-	
-	imshow("wapImage2", warpImage2);
-	
+	H = findHomography(features_image1, features_image2, CV_LMEDS);
+	 //0 - a regular method using all the points
+    //CV_RANSAC - RANSAC-based robust method
+    //CV_LMEDS - Least-Median robust method
 
-	Mat final(Size(imag2.cols*2 + imag1.cols, imag2.rows*2),CV_8UC3);
-
-	//Devide final into two parts (ROI - Region of interest)
-	//TODO, bug is here
-	Mat roi1(final, Rect(0, 0,  imag1.cols, imag1.rows));
-	Mat roi2(final, Rect(imag1.cols, 0, warpImage2.cols, warpImage2.rows));
-	warpImage2.copyTo(roi2);
-	imag1.copyTo(roi1);
-	imshow("final", final);
-	result = final;
-
-	// /* To remove the black portion after stitching, and confine in a rectangular region*/
-	// // vector with all non-black point positions
-	// std::vector<cv::Point> nonBlackList;
-	// nonBlackList.reserve(result.rows * result.cols);
-
-	// // add all non-black points to the vector
-	// // there are more efficient ways to iterate through the image
-	// for (int j = 0; j < result.rows; ++j)
-	// 	for (int i = 0; i < result.cols; ++i)
-	// 	{
-	// 		// if not black: add to the list
-	// 		if (result.at<cv::Vec3b>(j, i) != cv::Vec3b(0, 0, 0))
-	// 		{
-	// 			nonBlackList.push_back(cv::Point(i, j));
-	// 		}
-	// 	}
-
-	// // create bounding rect around those points
-	// cv::Rect bb = cv::boundingRect(nonBlackList);
-	// //assign it back to the result
-	// result = result(bb);	
-	// // display result and save it
-	
-	// cv::imshow("Reult", result(bb));
+	//Find invert H
+	invert_H = findHomography(features_image2, features_image1, CV_LMEDS);
 
 	return 0;
 }
