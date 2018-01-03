@@ -113,9 +113,6 @@ int stitchingTwoImages(Mat imag1, Mat imag2, Mat &result)
 	cv::Rect bb = cv::boundingRect(nonBlackList);
 	//assign it back to the result
 	result = result(bb);	
-	// display result and save it
-	
-	cv::imshow("Reult", result(bb));
 
 	return 0;
 }
