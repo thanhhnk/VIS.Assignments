@@ -18,7 +18,7 @@ using namespace cv::xfeatures2d;
 
 Stitcher::Mode mode = Stitcher::PANORAMA;
 vector<Mat> imgs;
-bool try_use_gpu = false; //Try for now
+bool try_use_gpu = false; 
 string result_name = "result.jpg";
 int parseCmdArgs(int argc, char **argv);
 int findHomographyMatrix(Mat imag1, Mat imag2, Mat& H, Mat& invert_H);
@@ -38,8 +38,8 @@ int main(int argc, char *argv[])
 		cout << "Can't stitch images, error code = " << int(status) << endl;
 		return -1;
 	}
-	// else
-	// 	imshow("stitchedImageOpenCV", panoOpenCV);
+	else
+		imshow("stitchedImageOpenCV", panoOpenCV);
 
 	
 	//NOTE! It is should start from image 3
@@ -47,8 +47,8 @@ int main(int argc, char *argv[])
 
 	Mat pano;
 	stitchingTwoImages(imgs[0], imgs[1], pano);
-	imshow("Image.00", imgs[0]);
-	imshow("Image.01", imgs[1]);
+	imshow("Image.01", imgs[0]);
+	imshow("Image.02", imgs[1]);
 	imshow("stitching completed imaged", pano);
 	// imwrite(result_name, pano);
 	// cout << "stitching completed successfully\n"
@@ -64,14 +64,14 @@ int stitchingTwoImages(Mat imag1, Mat imag2, Mat &result)
 	// Use the homography Matrix to warp the images
 	Mat H, H_Invert;
 	findHomographyMatrix(imag1, imag2, H, H_Invert);
-
-   
 	Mat warpImage2;
 	Mat warpImage1;
 	warpPerspective(imag2, warpImage2, H, Size(imag2.cols*2, imag2.rows*2), INTER_CUBIC);
-	warpPerspective(imag1, warpImage1, H, Size(imag2.cols*2, imag2.rows*2), INTER_CUBIC);
 	imshow("wapImage2", warpImage2);
-    imshow("warpImage1", warpImage1);
+
+	//warpPerspective(imag1, warpImage1, H, Size(imag2.cols*2, imag2.rows*2), INTER_CUBIC);
+
+    //imshow("warpImage1", warpImage1);
 
 	// Mat warpImage_invert2;
 	// Mat warpImage_invert1;
@@ -134,14 +134,13 @@ int findHomographyMatrix(Mat imag1, Mat imag2, Mat& H, Mat& invert_H)
 	//--Step 1 : Detect the keypoints using SURF Detector
 	int minHessian = 400;
 
-	Ptr<SURF> detector = SURF::create(minHessian);
+	Ptr<SIFT> detector = SIFT::create(minHessian);
 	std::vector<KeyPoint> keypoints_1, keypoints_2;
 	detector->detect(gray_image1, keypoints_1);
 	detector->detect(gray_image2, keypoints_2);
 
 	//--Step 2 : Calculate Descriptors (feature vectors)
-	//SurfDescriptorExtractor extractor;
-	Ptr<SURF> extractor = SURF::create();
+	Ptr<SIFT> extractor = SIFT::create();
 	Mat descriptors_img1, descriptors_img2;
 	extractor->compute(gray_image1, keypoints_1, descriptors_img1);
 	extractor->compute(gray_image2, keypoints_2, descriptors_img2);
@@ -161,8 +160,8 @@ int findHomographyMatrix(Mat imag1, Mat imag2, Mat& H, Mat& invert_H)
 		if (dist > max_dist)
 			max_dist = dist;
 	}
-	printf("-- Max dist : %f \n", max_dist);
-	printf("-- Min dist : %f \n", min_dist);
+	cout << "-- Max dist : " << max_dist << endl;
+	cout << "-- Min dist : " << min_dist <<endl;
 	//--Use only "good" matches (i.e. whose distance is less than 3 X min_dist )
 	std::vector<DMatch> good_matches;
 	for (int i = 0; i < descriptors_img1.rows; i++)
@@ -180,13 +179,14 @@ int findHomographyMatrix(Mat imag1, Mat imag2, Mat& H, Mat& invert_H)
 		features_image1.push_back(keypoints_1[good_matches[i].queryIdx].pt);
 		features_image2.push_back(keypoints_2[good_matches[i].trainIdx].pt);
 	}
-	//Find the Homography Matrix
-	//The homography matrix will use these matching points, to estimate a relative orientation transform within the two images
-	H = findHomography(features_image1, features_image2, CV_LMEDS);
-	 //0 - a regular method using all the points
+
+	//--Step.04 Find the Homography Matrix
+	//0 - a regular method using all the points
     //CV_RANSAC - RANSAC-based robust method
     //CV_LMEDS - Least-Median robust method
-
+	//The homography matrix will use these matching points, 
+	//	to estimate a relative orientation transform within the two imagess
+	H = findHomography(features_image1, features_image2, CV_LMEDS);
 	//Find invert H
 	invert_H = findHomography(features_image2, features_image1, CV_LMEDS);
 

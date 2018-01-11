@@ -12,6 +12,7 @@ sudo apt-get install libopencv-nonfree-dev
 ---If the nonfree doesnot work, using xfeature2D
 cmake -D -DINSTALL_CREATE_DISTRIB=ON -D CMAKE_INSTALL_PREFIX=/usr/local ..
 --To get xfeature2D
-https://github.com/opencv/opencv_contrib
+1. Get the opencv_contrib from this https://github.com/opencv/opencv_contrib
+2. Runing these following commands
 sudo cmake -DOPENCV_EXTRA_MODULES_PATH=/home/viki/opencv_contrib/modules -D CMAKE_INSTALL_PREFIX=/usr/local ..
 make -j5
