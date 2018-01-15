@@ -1,3 +1,1 @@
-/home/bilal/Vision/week12/assignment12/CMakeFiles/edit_cache.dir
-/home/bilal/Vision/week12/assignment12/CMakeFiles/rebuild_cache.dir
-/home/bilal/Vision/week12/assignment12/CMakeFiles/assignment12.dir
+/home/viki/Dropbox/1.Fonys.Docs/ESA.VIS/Projects/VIS.Assignments.git/assignment12/CMakeFiles/assignment12.dir

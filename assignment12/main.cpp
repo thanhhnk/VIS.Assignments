@@ -95,9 +95,9 @@ std::vector<cv::Point2d> findTargets(cv::Mat Image)
 	// Do Otsu global thresholding.
 	cv::threshold(Image,
 		imageThresh,		// output thresholded image
-		0,					// threshold value
+		200,					// threshold value // change from 0 to 200
 		255,				// output value
-		cv::THRESH_OTSU | cv::THRESH_BINARY_INV);		// threshold_type - invert
+		cv::THRESH_BINARY_INV);		// threshold_type - invert // get out of cv::THRESH_OTSU | 
 
 	// Apply morphological operations to get rid of small (noise) regions
 	cv::Mat structuringElmt = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3,3));
@@ -108,7 +108,7 @@ std::vector<cv::Point2d> findTargets(cv::Mat Image)
 	
 	
 	// Now find connected components
-	std::vector<std::vector<cv::Point>> contours;
+	std::vector<std::vector<cv::Point> > contours;
 	std::vector<cv::Vec4i> hierarchy;
 	
 	cv::findContours(
