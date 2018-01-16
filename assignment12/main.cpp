@@ -95,7 +95,7 @@ std::vector<cv::Point2d> findTargets(cv::Mat Image)
 	// Do Otsu global thresholding.
 	cv::threshold(Image,
 		imageThresh,		// output thresholded image
-		200,					// threshold value // change from 0 to 200
+		200,					// threshold value // change from 0 to
 		255,				// output value
 		cv::THRESH_BINARY_INV);		// threshold_type - invert // get out of cv::THRESH_OTSU | 
 
