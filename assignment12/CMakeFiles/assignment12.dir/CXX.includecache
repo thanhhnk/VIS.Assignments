@@ -15,6 +15,8 @@ opencv2/highgui.hpp
 /home/viki/Dropbox/1.Fonys.Docs/ESA.VIS/Projects/VIS.Assignments.git/assignment12/opencv2/highgui.hpp
 iostream
 -
+string
+-
 
 /usr/local/include/opencv/cxcore.h
 opencv2/core/core_c.h

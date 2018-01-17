@@ -2,6 +2,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 #include <iostream>
+#include <string>
 
 // Parameters for finding CCC targets
 #define DPIXEL	3.0				// max distance between centroids
@@ -19,6 +20,8 @@ std::vector<cv::Point2d> findTargets(cv::Mat Image);
 std::vector<cv::Point2d> orderTargets(std::vector<cv::Point2d> allTargets);
 cv::Mat placeImageToCorner(Mat& OriginalImage, cv::Mat& LabeledImage, std::vector<cv::Point2d>& pointOfVideoFrame);
 string intToString(int number);
+void printPointsInMatrix(Mat img, Mat mat, std::string name, cv::Point2d StartPoint);
+string floatToString(float number);
 
 int main(int argc, char *argv[])
 {	
@@ -82,7 +85,9 @@ int main(int argc, char *argv[])
 
 		
 		//imshow(windowName,LabeledImage);
+		resizeWindow(windowName, 500,300);
 		imshow(windowName,ResultImage);
+		
 		//waitKey(30);
 		char key = waitKey(30);
         if (key == 27) // ESC
@@ -149,6 +154,11 @@ cv::Mat placeImageToCorner(Mat& OriginalImage, cv::Mat& LabeledImage, std::vecto
 	cv::line(ResultImage, pointOfOrthophotoImage[1],pointOfVideoFrame_2f[1], cv::Scalar(255,0,0), 0.5);
 	cv::line(ResultImage, pointOfOrthophotoImage[2],pointOfVideoFrame_2f[2], cv::Scalar(255,0,0), 0.5);
 	cv::line(ResultImage, pointOfOrthophotoImage[3],pointOfVideoFrame_2f[3], cv::Scalar(255,0,0), 0.5);
+
+	cv::Point2d leftCorner;
+	leftCorner.x = 0;
+	leftCorner.y = ResultImage.rows - 60;
+	printPointsInMatrix(ResultImage, H, "Transformation matrix", leftCorner);
 
 	return ResultImage;
 }
@@ -321,4 +331,34 @@ string intToString(int number)
 	std::stringstream ss;
 	ss << number;
 	return ss.str();
+}
+
+string floatToString(float number)
+{
+	std::stringstream ss;
+	ss << number;
+	return ss.str();
+}
+
+void printPointsInMatrix(Mat img, Mat mat, std::string name, cv::Point2d StartPoint)
+{
+	int fontFace = CV_FONT_HERSHEY_PLAIN;
+	double fontScale = 1;
+	putText(img, name, StartPoint, fontFace, fontScale,(0,0,255), 2, 1);
+	int startx = StartPoint.x;
+	for (int i = 0; i < mat.rows; i++)
+	{
+		StartPoint.y = StartPoint.y + 20;
+		for (int j = 0; j < mat.cols; j++)
+		{
+			StartPoint.x = StartPoint.x + 200;
+			putText(img, floatToString(mat.at<float> (i, j)), StartPoint , fontFace, fontScale,(0,0,255), 2, 1);
+			//cout << +(mat.at<float> (i, j)) << "\t";
+			if (j == mat.cols - 1)
+			{
+				StartPoint.x = startx;
+			}
+		}
+	
+	}
 }
