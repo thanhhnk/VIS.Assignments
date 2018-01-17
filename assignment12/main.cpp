@@ -99,6 +99,12 @@ cv::Mat placeImageToCorner(Mat& OriginalImage, cv::Mat& LabeledImage, std::vecto
 
 	cv::Mat ResultImage = LabeledImage.clone();
 
+	cv::Mat orthophotoImage;
+
+	Size size(155,84);
+
+	resize(ResultImage,orthophotoImage,size);
+
 	if(pointOfVideoFrame.size() < 4)
 	{
 		return ResultImage;
@@ -115,19 +121,19 @@ cv::Mat placeImageToCorner(Mat& OriginalImage, cv::Mat& LabeledImage, std::vecto
 	pointOfOrthophotoImage[0].x = 0;
 	pointOfOrthophotoImage[0].y = 0;
 
-	pointOfOrthophotoImage[1].x = ResultImage.cols;
+	pointOfOrthophotoImage[1].x = orthophotoImage.cols;
 	pointOfOrthophotoImage[1].y = 0;
 
 	pointOfOrthophotoImage[2].x = 0;
-	pointOfOrthophotoImage[2].y = ResultImage.rows;
+	pointOfOrthophotoImage[2].y = orthophotoImage.rows;
 
-	pointOfOrthophotoImage[3].x = ResultImage.cols;
-	pointOfOrthophotoImage[3].y = ResultImage.rows;
+	pointOfOrthophotoImage[3].x = orthophotoImage.cols;
+	pointOfOrthophotoImage[3].y = orthophotoImage.rows;
 
 	//Draw circle
 	for(int i = 0; i < 4; i++)
 	{
-		circle(ResultImage, Point(pointOfOrthophotoImage[i].x, pointOfOrthophotoImage[i].y), 4, Scalar(0, 255, 255), 3);
+		circle(ResultImage, Point(pointOfOrthophotoImage[i].x, pointOfOrthophotoImage[i].y), 4, Scalar(0, 0, 255), 3);
 	}
 
 	// Get perspective matrix from corners.
@@ -135,13 +141,14 @@ cv::Mat placeImageToCorner(Mat& OriginalImage, cv::Mat& LabeledImage, std::vecto
 
     // Find the warped image
     Mat warped;
-    warpPerspective(OriginalImage, warped, H, ResultImage.size(), INTER_LINEAR, BORDER_CONSTANT);
+    warpPerspective(OriginalImage, warped, H, orthophotoImage.size(), INTER_LINEAR);
 
-    // resize image and put over original
-	cv::Mat small_image;
-	Size size(155,84);
-	resize(warped,small_image,size);
-	small_image.copyTo(ResultImage(cv::Rect(0,0,small_image.cols, small_image.rows)));
+	warped.copyTo(ResultImage(cv::Rect(3,3,orthophotoImage.cols, orthophotoImage.rows)));
+
+	cv::line(ResultImage, pointOfOrthophotoImage[0],pointOfVideoFrame_2f[0], cv::Scalar(255,0,0), 0.5);
+	cv::line(ResultImage, pointOfOrthophotoImage[1],pointOfVideoFrame_2f[1], cv::Scalar(255,0,0), 0.5);
+	cv::line(ResultImage, pointOfOrthophotoImage[2],pointOfVideoFrame_2f[2], cv::Scalar(255,0,0), 0.5);
+	cv::line(ResultImage, pointOfOrthophotoImage[3],pointOfVideoFrame_2f[3], cv::Scalar(255,0,0), 0.5);
 
 	return ResultImage;
 }
