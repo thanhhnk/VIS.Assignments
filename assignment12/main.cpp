@@ -17,11 +17,12 @@ const string windowName = "Captured Image";
 
 std::vector<cv::Point2d> findTargets(cv::Mat Image);
 std::vector<cv::Point2d> orderTargets(std::vector<cv::Point2d> allTargets);
+cv::Mat placeImageToCorner(Mat& OriginalImage, cv::Mat& LabeledImage, std::vector<cv::Point2d>& pointOfVideoFrame);
 string intToString(int number);
 
 int main(int argc, char *argv[])
 {	
-	Mat cameraFeed;
+	Mat cameraFeed, LabeledImage, ResultImage;
 
 	//video capture object to acquire video file feed
 	VideoCapture capture;
@@ -57,22 +58,31 @@ int main(int argc, char *argv[])
 		cv::cvtColor(cameraFeed, temp, CV_RGB2GRAY);
 		std::vector<cv::Point2d> foundTargets = findTargets(temp);
 		std::vector<cv::Point2d> orderedTargets = orderTargets(foundTargets);
-		
+		std::vector<cv::Point2d> cornerPoints;
 		cout << "foundTargets.size= " << foundTargets.size() << endl;
 		
 		std::vector<cv::Point2d>::iterator it;
 		int count = 0;
+
+		LabeledImage = cameraFeed.clone();
 		
 		for(it = orderedTargets.begin(); it != orderedTargets.end(); ++it)
 		{
 			cout << "x: " << (*it).x << ", y: " << (*it).y << endl;
-			circle(cameraFeed, Point((*it).x, (*it).y), 4, Scalar(0, 255, 255), 3);
-			putText(cameraFeed,"#"+intToString(count),
+			circle(LabeledImage, Point((*it).x, (*it).y), 4, Scalar(0, 255, 255), 3);
+			putText(LabeledImage,"#"+intToString(count),
 					(*it),2,1,Scalar(0,24,255),2);
+			if(count != 1) // we only need for points
+			{
+				cornerPoints.push_back(*it);
+			}
 			count++;
 		}
+	    ResultImage = placeImageToCorner(cameraFeed, LabeledImage, cornerPoints);
+
 		
-		imshow(windowName,cameraFeed);
+		//imshow(windowName,LabeledImage);
+		imshow(windowName,ResultImage);
 		//waitKey(30);
 		char key = waitKey(30);
         if (key == 27) // ESC
@@ -84,7 +94,57 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+cv::Mat placeImageToCorner(Mat& OriginalImage, cv::Mat& LabeledImage, std::vector<cv::Point2d>& pointOfVideoFrame)
+{
 
+	cv::Mat ResultImage = LabeledImage.clone();
+
+	if(pointOfVideoFrame.size() < 4)
+	{
+		return ResultImage;
+	}
+
+	Point2f pointOfVideoFrame_2f[4];
+	for (int i = 0; i < 4; i++)
+	{
+		pointOfVideoFrame_2f[i] = (Point2f)pointOfVideoFrame.at(i);
+	}
+
+	Point2f pointOfOrthophotoImage[4];
+
+	pointOfOrthophotoImage[0].x = 0;
+	pointOfOrthophotoImage[0].y = 0;
+
+	pointOfOrthophotoImage[1].x = ResultImage.cols;
+	pointOfOrthophotoImage[1].y = 0;
+
+	pointOfOrthophotoImage[2].x = 0;
+	pointOfOrthophotoImage[2].y = ResultImage.rows;
+
+	pointOfOrthophotoImage[3].x = ResultImage.cols;
+	pointOfOrthophotoImage[3].y = ResultImage.rows;
+
+	//Draw circle
+	for(int i = 0; i < 4; i++)
+	{
+		circle(ResultImage, Point(pointOfOrthophotoImage[i].x, pointOfOrthophotoImage[i].y), 4, Scalar(0, 255, 255), 3);
+	}
+
+	// Get perspective matrix from corners.
+	Mat H = getPerspectiveTransform(pointOfVideoFrame_2f, pointOfOrthophotoImage);
+
+    // Find the warped image
+    Mat warped;
+    warpPerspective(OriginalImage, warped, H, ResultImage.size(), INTER_LINEAR, BORDER_CONSTANT);
+
+    // resize image and put over original
+	cv::Mat small_image;
+	Size size(155,84);
+	resize(warped,small_image,size);
+	small_image.copyTo(ResultImage(cv::Rect(0,0,small_image.cols, small_image.rows)));
+
+	return ResultImage;
+}
 
 std::vector<cv::Point2d> findTargets(cv::Mat Image)
 {
